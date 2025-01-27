@@ -6,6 +6,12 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
+
+#include <mavros_msgs/CommandBool.h>
+#include <mavros_msgs/CommandLong.h>
+#include <mavros_msgs/SetMode.h>
+#include <mavros_msgs/State.h>
+
 #include "ros2_tools/msg/lidar_pose.hpp"
 #include <std_msgs/msg/string.hpp>
 
@@ -15,6 +21,12 @@ class target;
 class quadcopter : public rclcpp::Node {
 public:
     float x, y, z, yaw; // 全局位置
+    float vx, vy, vz; // 速度
+    float ax, ay, az; // 加速度
+    float roll, pitch; // 姿态角
+    float dr, dp; // 角速度
+
+    mavros::State current_state;
 
     quadcopter();
     void quadcopter_init();

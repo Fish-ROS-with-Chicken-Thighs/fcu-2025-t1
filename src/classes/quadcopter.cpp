@@ -27,7 +27,14 @@ void quadcopter::quad_init() {
     });
     
     // 起飞前检查
+    mavros_msgs::SetMode offb_set_mode;
+    offb_set_mode.request.custom_mode = "OFFBOARD";
 
+    mavros_msgs::CommandBool arm_cmd;
+    arm_cmd.request.value = true;
+    
+
+    int mode = 0;
     // 主循环
     while(rclcpp::ok()) {
         rate->sleep();
