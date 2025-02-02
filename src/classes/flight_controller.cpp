@@ -1,23 +1,25 @@
 #include "flight_controller.h"
 
-flight_controller::flight_controller(quadcopter* quad_node) : Node("flight_controller_node"), quad_node(quad_node), rate(std::make_shared<rclcpp::Rate>(20)) {}
+flight_controller::flight_controller(std::weak_ptr<quadcopter> quad_node) : Node("flight_controller_node"), quad_node(quad_node), rate(std::make_shared<rclcpp::Rate>(20)) {}
 
 // target定点移动
-void flight_controller::fly_to_target(quadcopter* quad_node, target* target) {    
-    do {quad_node->target_pos->pose.position.x = target->x;
-        quad_node->target_pos->pose.position.y = target->y;
-        quad_node->target_pos->pose.position.z = target->z;
-        quad_node->target_pos->pose.orientation.x = 0.0;
-        quad_node->target_pos->pose.orientation.y = 0.0;
-        quad_node->target_pos->pose.orientation.z = sin(target->yaw / 2);
-        quad_node->target_pos->pose.orientation.w = cos(target->yaw / 2);
+void flight_controller::fly_to_target(std::weak_ptr<quadcopter> quad_node, target* target) {
+    if (auto quad_ptr = quad_node.lock()) {
+        quad_ptr->target_pos->pose.position.x = target->x;
+        quad_ptr->target_pos->pose.position.y = target->y;
+        quad_ptr->target_pos->pose.position.z = target->z;
+        quad_ptr->target_pos->pose.orientation.x = 0.0;
+        quad_ptr->target_pos->pose.orientation.y = 0.0;
+        quad_ptr->target_pos->pose.orientation.z = sin(target->yaw / 2);
+        quad_ptr->target_pos->pose.orientation.w = cos(target->yaw / 2);
 
-        quad_node->pos_pub->publish(*quad_node->target_pos);
-        //TODO：正在移动到点，可以添加突发事件
-        rate->sleep();
-    } 
-    while (!pos_check(quad_node->lidar_pos));
-    quad_node->pos_pub->publish(*quad_node->target_pos);
+        do {
+            quad_ptr->pos_pub->publish(*quad_ptr->target_pos);
+            rate->sleep();
+        } while (!pos_check(quad_ptr->lidar_pos, target));
+    } else {
+        RCLCPP_ERROR(this->get_logger(), "Failed to lock quadcopter object.");
+    }
 }
 
 // 自身位置检查，distance为误差默认0.1
@@ -36,13 +38,9 @@ bool flight_controller::pos_check(std::shared_ptr<ros2_tools::msg::LidarPose> li
                                                 std::abs(lidar_pos->yaw - target->yaw) < 0.1);
 }
 
-
-
-
-
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
-    auto flight_controller_node = std::make_shared<flight_controller>();
+    auto flight_controller_node = std::make_shared<flight_controller>(quad_node);
     rclcpp::spin(flight_controller_node);
     rclcpp::shutdown();
     return 0;
