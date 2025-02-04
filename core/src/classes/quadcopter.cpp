@@ -67,7 +67,7 @@ void quadcopter::pre_flight_checks_loop() {
             if (set_mode_client->async_send_request(mode_request).valid()) {
                 RCLCPP_INFO(this->get_logger(), "armed and OFFBOARDING...");
                 target simp(0, 0, 0.5, 0);
-                flight_ctrl->fly_to_target(std::static_pointer_cast<quadcopter>(shared_from_this()), &simp);
+                flight_ctrl->fly_to_target(&simp);
             }
             last_request = this->now();
         }
@@ -97,6 +97,7 @@ void quadcopter::lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg) 
     yaw = msg->yaw;
 }
 
+// 主程序入口
 int main(int argc, char *argv[]) {
     rclcpp::init(argc, argv);
     auto quad_node = std::make_shared<quadcopter>();

@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'vision_2025_1th'
+package_name = 'vision'
 
 setup(
     name=package_name,

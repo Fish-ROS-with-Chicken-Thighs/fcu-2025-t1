@@ -6,9 +6,8 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/twist.hpp>
-#include <geometry_msgs/msg/pose_stamped.h>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <std_msgs/msg/string.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
 
 #include <mavros_msgs/srv/command_bool.hpp>
 #include <mavros_msgs/srv/command_long.hpp>
@@ -28,7 +27,7 @@ public:
     float roll, pitch; // 姿态角
     float dr, dp; // 角速度
 
-    friend class flight_controller;
+    friend class flight_controller; // 为了保险
 
     quadcopter();
     void quad_init(); // 初始化quad节点控制流程（可能进行树结构改良）
@@ -41,7 +40,7 @@ private:
 
     rclcpp::Subscription<ros2_tools::msg::LidarPose>::SharedPtr lidar_sub;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pos_pub;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr motor_pub;
+    rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr vel_pub;
 
     rclcpp::Client<mavros_msgs::srv::CommandBool>::SharedPtr arming_client;
     rclcpp::Client<mavros_msgs::srv::CommandLong>::SharedPtr command_client;
@@ -50,9 +49,11 @@ private:
     
     std::shared_ptr<std::thread> spin_thread;
     std::shared_ptr<rclcpp::Rate> rate;
-    std::shared_ptr<ros2_tools::msg::LidarPose> lidar_pos;
     std::shared_ptr<geometry_msgs::msg::PoseStamped> target_pos;
+    std::shared_ptr<geometry_msgs::msg::TwistStamped> move_vel;
 
-    void lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg); // 雷达数据回调
+    // 雷达数据回调
+    std::shared_ptr<ros2_tools::msg::LidarPose> lidar_pos;
+    void lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg);
 };
 #endif

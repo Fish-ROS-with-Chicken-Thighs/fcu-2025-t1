@@ -3,7 +3,7 @@
 flight_controller::flight_controller(std::shared_ptr<quadcopter> quad_node) : Node("flight_controller_node"), quad_node(quad_node), rate(std::make_shared<rclcpp::Rate>(20)) {}
 
 // target定点移动
-void flight_controller::fly_to_target(std::shared_ptr<quadcopter> quad_node, target* target) {
+void flight_controller::fly_to_target(target* target) {
     quad_node->target_pos->pose.position.x = target->x;
     quad_node->target_pos->pose.position.y = target->y;
     quad_node->target_pos->pose.position.z = target->z;
@@ -32,3 +32,15 @@ bool flight_controller::pos_check(std::shared_ptr<LidarPose> lidar_pos, target* 
                                                 std::abs(lidar_pos->y - target->y) < distance_y &&
                                                 std::abs(lidar_pos->z - target->z) < distance_z && 
                                                 std::abs(lidar_pos->yaw - target->yaw) < 0.1);}
+
+// 速度发布飞行（单次）
+void flight_controller::fly_by_velocity(velocity* velocity) {
+    quad_node->move_vel->twist.linear.x = velocity->vx;
+    quad_node->move_vel->twist.linear.y = velocity->vy;
+    quad_node->move_vel->twist.linear.z = velocity->vz;
+    quad_node->move_vel->twist.angular.x = velocity->dy;
+    quad_node->move_vel->twist.angular.y = velocity->dp;
+    quad_node->move_vel->twist.angular.z = velocity->dr;
+
+    quad_node->vel_pub->publish(*quad_node->move_vel);
+}
