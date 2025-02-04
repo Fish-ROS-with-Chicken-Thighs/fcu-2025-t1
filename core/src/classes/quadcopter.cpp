@@ -68,7 +68,7 @@ void quadcopter::pre_flight_checks_loop() {
             if (set_mode_client->async_send_request(mode_request).valid()) {
                 RCLCPP_INFO(this->get_logger(), "armed and OFFBOARDING...");
                 target simp(0, 0, 0.5, 0);
-                flight_ctrl->fly_to_target(this, &simp);
+                flight_ctrl->fly_to_target(shared_from_this(), &simp);
             }
             last_request = this->now();
         }

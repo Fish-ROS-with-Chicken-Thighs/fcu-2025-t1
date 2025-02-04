@@ -18,7 +18,7 @@ void flight_controller::fly_to_target(std::weak_ptr<quadcopter> quad_node, targe
             rate->sleep();
         } while (!pos_check(quad_ptr->lidar_pos, target));
     } else {
-        RCLCPP_ERROR(this->get_logger(), "Failed to lock quadcopter object.");
+        RCLCPP_ERROR(this->get_logger(), "Failed to lock quadcopter");
     }
 }
 
@@ -40,7 +40,7 @@ bool flight_controller::pos_check(std::shared_ptr<ros2_tools::msg::LidarPose> li
 
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
-    auto flight_controller_node = std::make_shared<flight_controller>(quad_node);
+    auto flight_controller_node = std::make_shared<flight_controller>(quad_node.lock());
     rclcpp::spin(flight_controller_node);
     rclcpp::shutdown();
     return 0;
