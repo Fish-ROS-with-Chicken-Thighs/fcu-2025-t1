@@ -32,7 +32,7 @@ public:
 
     quadcopter();
     void quad_init(); // 初始化quad节点控制流程（可能进行树结构改良）
-    void start_spin_thread(); // 注册shutdown回调（全局）并创建spin线程
+    void start_spin_thread(); // 注册shutdown回调并创建spin线程
     void pre_flight_checks_loop(); // 起飞前检查
     void main_loop(); // 主循环
 

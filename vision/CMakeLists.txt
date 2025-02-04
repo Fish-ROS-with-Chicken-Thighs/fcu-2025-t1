@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(vision_2025_1th)
+project(vision)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)

@@ -18,15 +18,8 @@ find_package(mavros_msgs REQUIRED)
 #ament_export_dependencies(rosidl_default_runtime)
 
 add_executable(quad_node src/classes/flight_controller.cpp src/classes/quadcopter.cpp)
-add_executable(flight_controller_node src/classes/flight_controller.cpp)
 
 target_include_directories(quad_node PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/classes
-)
-
-target_include_directories(flight_controller_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   ${CMAKE_CURRENT_SOURCE_DIR}/src/classes
@@ -36,10 +29,9 @@ target_include_directories(flight_controller_node PUBLIC
 #target_link_libraries(main_node ${cpp_typesupport_target})
 
 ament_target_dependencies(quad_node rclcpp geometry_msgs nav_msgs ros2_tools std_msgs mavros_msgs)
-ament_target_dependencies(flight_controller_node rclcpp geometry_msgs nav_msgs ros2_tools std_msgs mavros_msgs)
 set(CMAKE_INSTALL_RPATH /usr/local/lib)
 
-install(TARGETS quad_node flight_controller_node DESTINATION lib/${PROJECT_NAME})
-install(DIRECTORY msg srv DESTINATION share/${PROJECT_NAME})
+install(TARGETS quad_node DESTINATION lib/${PROJECT_NAME})
+#install(DIRECTORY msg srv DESTINATION share/${PROJECT_NAME})
 
 ament_package()

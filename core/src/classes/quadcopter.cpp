@@ -12,11 +12,10 @@ quadcopter::quadcopter() : Node("quad_node") {
 
     lidar_pos = std::make_shared<ros2_tools::msg::LidarPose>();
     target_pos = std::make_shared<geometry_msgs::msg::PoseStamped>();
-
-    // 构造飞行控制类
-    flight_ctrl = std::make_shared<flight_controller>(shared_from_this());
-
     RCLCPP_INFO(this->get_logger(), "quadcopter init");
+
+    flight_ctrl = std::make_shared<flight_controller>(std::static_pointer_cast<quadcopter>(shared_from_this()));
+    RCLCPP_INFO(this->get_logger(), "flight_ctrl init");
 }
 
 // 初始化quad节点控制流程（可能进行树结构改良）
@@ -26,7 +25,7 @@ void quadcopter::quad_init() {
     main_loop();
 }
 
-// 注册shutdown回调（全局）并创建spin线程
+// 注册shutdown回调（全局），并创建spin线程处理回调
 void quadcopter::start_spin_thread() {
     rclcpp::on_shutdown([this]() {
         if (spin_thread && spin_thread->joinable()) {
@@ -68,7 +67,7 @@ void quadcopter::pre_flight_checks_loop() {
             if (set_mode_client->async_send_request(mode_request).valid()) {
                 RCLCPP_INFO(this->get_logger(), "armed and OFFBOARDING...");
                 target simp(0, 0, 0.5, 0);
-                flight_ctrl->fly_to_target(shared_from_this(), &simp);
+                flight_ctrl->fly_to_target(std::static_pointer_cast<quadcopter>(shared_from_this()), &simp);
             }
             last_request = this->now();
         }
