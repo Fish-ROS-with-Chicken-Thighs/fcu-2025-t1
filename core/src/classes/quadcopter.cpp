@@ -11,7 +11,6 @@ quadcopter::quadcopter() : Node("quad_node") {
     set_mode_client = this->create_client<mavros_msgs::srv::SetMode>("mavros/set_mode");
 
     lidar_pos = std::make_shared<ros2_tools::msg::LidarPose>();
-    target_pos = std::make_shared<geometry_msgs::msg::PoseStamped>();
     RCLCPP_INFO(this->get_logger(), "quadcopter init");
 
     flight_ctrl = std::make_shared<flight_controller>(std::static_pointer_cast<quadcopter>(shared_from_this()));
@@ -72,7 +71,7 @@ void quadcopter::pre_flight_checks_loop() {
             last_request = this->now();
         }
         // 如果已解锁，并offbard，结束循环
-        if (current_state.armed && current_state.mode == "OFFBOARD") {
+        if (current_state->armed && current_state->mode == "OFFBOARD") {
             RCLCPP_INFO(this->get_logger(), "armed and OFFBOARD success!");
             break;
         }
@@ -81,7 +80,7 @@ void quadcopter::pre_flight_checks_loop() {
 }
 
 // 另一种起飞
-void arm_and_takeoff(float altitude) {
+void quadcopter::arm_and_takeoff(float altitude) {
     // 发送解锁指令
     auto client = this->create_client<mavros_msgs::srv::CommandTOL>("/mavros/cmd/takeoff");
     while (!client->wait_for_service(std::chrono::seconds(2))) {

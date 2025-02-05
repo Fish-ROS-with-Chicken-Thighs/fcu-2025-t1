@@ -18,7 +18,7 @@ public:
     flight_controller(std::shared_ptr<quadcopter> quad_node);
     void fly_to_target(target* target); // target定点移动
     void fly_by_velocity(velocity* velocity); // 速度发布飞行（单次）
-    void fly_by_path(); // 路径航点飞行
+    void fly_by_path(path* path); // 路径航点飞行
 
 private:
     std::shared_ptr<quadcopter> quad_node;
@@ -27,12 +27,12 @@ private:
     // 自身位置检查，distance为误差默认0.1
     bool pos_check(std::shared_ptr<ros2_tools::msg::LidarPose> lidar_pos, 
                                     target* target, 
-                                    double distance = 0.1);
+                                    float distance = 0.1);
     // 重载严格检查，多维误差
     bool pos_check(std::shared_ptr<ros2_tools::msg::LidarPose> lidar_pos, 
                                     target* target, 
-                                    double distance_x, 
-                                    double distance_y, 
-                                    double distance_z);
+                                    float distance_x, 
+                                    float distance_y, 
+                                    float distance_z);
 };
 #endif
