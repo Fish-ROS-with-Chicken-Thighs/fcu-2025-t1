@@ -35,6 +35,8 @@ public:
     void pre_flight_checks_loop(); // 起飞前检查
     void main_loop(); // 主循环
 
+    void arm_and_takeoff(float altitude); // 另一种起飞
+
 private:
     std::shared_ptr<flight_controller> flight_ctrl; // 持有控制类，增加引用次数
 
@@ -45,7 +47,6 @@ private:
     rclcpp::Client<mavros_msgs::srv::CommandBool>::SharedPtr arming_client;
     rclcpp::Client<mavros_msgs::srv::CommandLong>::SharedPtr command_client;
     rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr set_mode_client;
-    mavros_msgs::msg::State current_state;
     
     std::shared_ptr<std::thread> spin_thread;
     std::shared_ptr<rclcpp::Rate> rate;
@@ -55,5 +56,9 @@ private:
     // 雷达数据回调
     std::shared_ptr<ros2_tools::msg::LidarPose> lidar_pos;
     void lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg);
+
+    // mavros状态回调
+    std::shared_ptr<mavros_msgs::msg::State> current_state;
+    void state_cb(const mavros_msgs::msg::State::SharedPtr msg);
 };
 #endif

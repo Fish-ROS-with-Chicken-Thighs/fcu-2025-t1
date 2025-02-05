@@ -56,14 +56,14 @@ void quadcopter::pre_flight_checks_loop() {
     rclcpp::Time last_request = this->now();
     while (rclcpp::ok()) {
         // 定时检查是否解锁
-        if (!current_state.armed && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
+        if (!current_state->armed && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
             if (arming_client->async_send_request(arm_request).valid()) {
                 RCLCPP_INFO(this->get_logger(), "arming...");
             }
             last_request = this->now();
         } 
         // 定时尝试OFFBOARD
-        else if (current_state.mode != "OFFBOARD" && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
+        else if (current_state->mode != "OFFBOARD" && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
             if (set_mode_client->async_send_request(mode_request).valid()) {
                 RCLCPP_INFO(this->get_logger(), "armed and OFFBOARDING...");
                 target simp(0, 0, 0.5, 0);
@@ -78,6 +78,21 @@ void quadcopter::pre_flight_checks_loop() {
         }
         rate->sleep();
     }
+}
+
+// 另一种起飞
+void arm_and_takeoff(float altitude) {
+    // 发送解锁指令
+    auto client = this->create_client<mavros_msgs::srv::CommandTOL>("/mavros/cmd/takeoff");
+    while (!client->wait_for_service(std::chrono::seconds(2))) {
+        RCLCPP_WARN(this->get_logger(), "等待解锁服务...");
+    }
+
+    auto request = std::make_shared<mavros_msgs::srv::CommandTOL::Request>();
+    request->altitude = altitude;
+
+    auto future = client->async_send_request(request);
+    RCLCPP_INFO(this->get_logger(), "发送起飞指令");
 }
 
 // 主循环
@@ -95,6 +110,11 @@ void quadcopter::lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg) 
     y = msg->y;
     z = msg->z;
     yaw = msg->yaw;
+}
+
+// mavros状态回调
+void quadcopter::state_cb(const mavros_msgs::msg::State::SharedPtr msg) {
+    current_state = msg;
 }
 
 // 主程序入口

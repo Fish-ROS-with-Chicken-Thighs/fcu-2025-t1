@@ -4,18 +4,21 @@
 #include "quadcopter.h"
 #include "target.hpp"
 #include "velocity.hpp"
+#include "path.hpp"
 
 #define pi 3.14
 
 class quadcopter;
 class target;
 class velocity;
+class path;
 
 class flight_controller : public rclcpp::Node {
 public:
     flight_controller(std::shared_ptr<quadcopter> quad_node);
     void fly_to_target(target* target); // target定点移动
     void fly_by_velocity(velocity* velocity); // 速度发布飞行（单次）
+    void fly_by_path(); // 路径航点飞行
 
 private:
     std::shared_ptr<quadcopter> quad_node;

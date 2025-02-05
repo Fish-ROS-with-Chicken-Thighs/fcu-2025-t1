@@ -21,7 +21,7 @@ void flight_controller::fly_to_target(target* target) {
 using namespace ros2_tools::msg;
 // 自身位置检查，distance为误差默认0.1
 bool flight_controller::pos_check(std::shared_ptr<LidarPose> lidar_pos, target* target, double distance) {
-    return target->reached || (target->reached = std::sqrt(std::pow(lidar_pos->x - target->x, 2) +
+    return target->reached || (target->reached = std::sqrt(std::pow(quad_node_lidar_pos->x - target->x, 2) +
                                             std::pow(lidar_pos->y - target->y, 2) + 
                                             std::pow(lidar_pos->z - target->z, 2)) < distance &&
                                             std::abs(lidar_pos->yaw - target->yaw) < 0.1);}
@@ -44,3 +44,16 @@ void flight_controller::fly_by_velocity(velocity* velocity) {
 
     quad_node->vel_pub->publish(*quad_node->move_vel);
 }
+
+// 路径航点飞行
+void fly_by_path() {
+    geometry_msgs::msg::PoseStamped waypoint;
+    if (path.get_next_waypoint(waypoint)) {
+        pos_pub->publish(waypoint);
+        RCLCPP_INFO(this->get_logger(), "发送航点: x=%.2f, y=%.2f, z=%.2f",
+                    waypoint.pose.position.x, waypoint.pose.position.y, waypoint.pose.position.z);
+    } else {
+        RCLCPP_INFO(this->get_logger(), "航点已全部执行完毕");
+    }
+}
+
