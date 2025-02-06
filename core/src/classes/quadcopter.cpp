@@ -2,6 +2,8 @@
 
 quadcopter::quadcopter() : Node("quad_node") {
     rate = std::make_shared<rclcpp::Rate>(20.0);
+
+    lidar_pos = std::make_shared<ros2_tools::msg::LidarPose>();
     lidar_sub = this->create_subscription<ros2_tools::msg::LidarPose>("lidar_data", 10, std::bind(&quadcopter::lidar_pose_cb, this, std::placeholders::_1));
     
     pos_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("position", 10);
@@ -9,19 +11,10 @@ quadcopter::quadcopter() : Node("quad_node") {
     arming_client = this->create_client<mavros_msgs::srv::CommandBool>("mavros/cmd/arming");
     command_client = this->create_client<mavros_msgs::srv::CommandLong>("mavros/cmd/command");
     set_mode_client = this->create_client<mavros_msgs::srv::SetMode>("mavros/set_mode");
-
-    lidar_pos = std::make_shared<ros2_tools::msg::LidarPose>();
     RCLCPP_INFO(this->get_logger(), "quadcopter init");
 
     flight_ctrl = std::make_shared<flight_controller>(std::static_pointer_cast<quadcopter>(shared_from_this()));
     RCLCPP_INFO(this->get_logger(), "flight_ctrl init");
-}
-
-// 初始化quad节点控制流程（可能进行树结构改良）
-void quadcopter::quad_init() {
-    start_spin_thread();
-    pre_flight_checks_loop();
-    main_loop();
 }
 
 // 注册shutdown回调（全局），并创建spin线程处理回调
@@ -79,27 +72,19 @@ void quadcopter::pre_flight_checks_loop() {
     }
 }
 
-// 另一种起飞
-void quadcopter::arm_and_takeoff(float altitude) {
-    // 发送解锁指令
-    auto client = this->create_client<mavros_msgs::srv::CommandTOL>("/mavros/cmd/takeoff");
-    while (!client->wait_for_service(std::chrono::seconds(2))) {
-        RCLCPP_WARN(this->get_logger(), "等待解锁服务...");
-    }
-
-    auto request = std::make_shared<mavros_msgs::srv::CommandTOL::Request>();
-    request->altitude = altitude;
-
-    auto future = client->async_send_request(request);
-    RCLCPP_INFO(this->get_logger(), "发送起飞指令");
-}
-
 // 主循环
 void quadcopter::main_loop() {
     while (rclcpp::ok()) {
         //int mode = 0;
         rate->sleep();
     }
+}
+
+// 初始化quad节点控制流程（可能进行树结构改良）
+void quadcopter::quad_init() {
+    start_spin_thread();
+    pre_flight_checks_loop();
+    main_loop();
 }
 
 // 雷达数据回调

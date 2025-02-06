@@ -10,7 +10,6 @@
 #include <geometry_msgs/msg/twist_stamped.hpp>
 
 #include <mavros_msgs/srv/command_bool.hpp>
-#include <mavros_msgs/srv/command_tol.hpp>
 #include <mavros_msgs/srv/command_long.hpp>
 #include <mavros_msgs/srv/set_mode.hpp>
 #include <mavros_msgs/msg/state.hpp>
@@ -51,9 +50,8 @@ private:
     
     std::shared_ptr<std::thread> spin_thread;
     std::shared_ptr<rclcpp::Rate> rate;
-    std::shared_ptr<geometry_msgs::msg::TwistStamped> move_vel;
 
-    // 雷达数据回调
+    // Lidar数据回调
     std::shared_ptr<ros2_tools::msg::LidarPose> lidar_pos;
     void lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg);
 

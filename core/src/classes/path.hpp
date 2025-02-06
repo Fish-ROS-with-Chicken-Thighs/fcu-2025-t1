@@ -6,6 +6,9 @@
 
 class path {
 public:
+    size_t current_index = 0;
+    std::vector<geometry_msgs::msg::PoseStamped> waypoints;
+    
     // 添加航点
     void add_waypoint(geometry_msgs::msg::PoseStamped& waypoint) {
         waypoints.push_back(waypoint);
@@ -37,10 +40,6 @@ public:
             return false; // 所有航点已发送
         }
     }
-
-private:
-    std::vector<geometry_msgs::msg::PoseStamped> waypoints;
-    size_t current_index = 0;
 };
 
 #endif
