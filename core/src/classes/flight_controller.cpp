@@ -5,12 +5,12 @@ flight_controller::flight_controller(std::shared_ptr<quadcopter> quad_node) : No
 // target定点移动
 void flight_controller::fly_to_target(target* target) {
     do {
+        target->pose_stamped.header.stamp = rclcpp::Clock().now();
         quad_node->pos_pub->publish(target->pose_stamped);
         rate->sleep();
     } while (!pos_check(target));
 }
 
-using namespace ros2_tools::msg;
 // 自身位置检查，distance为误差默认0.1
 bool flight_controller::pos_check(target* target, float distance) {
     return target->reached || (target->reached = std::sqrt(std::pow(quad_node->lidar_pos->x - target->get_x(), 2) +
@@ -27,6 +27,7 @@ bool flight_controller::pos_check(target* target, float distance_x, float distan
 
 // velocity速度飞行，单次发布
 void flight_controller::fly_by_velocity(velocity* velocity) {
+    velocity->twist_stamped.header.stamp = rclcpp::Clock().now();
     quad_node->vel_pub->publish(velocity->twist_stamped);
     rate->sleep();
 }
