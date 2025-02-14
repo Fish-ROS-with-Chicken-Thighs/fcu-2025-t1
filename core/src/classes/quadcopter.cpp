@@ -1,4 +1,5 @@
 #include<quadcopter.h>
+#include "flight_controller.h"
 
 quadcopter::quadcopter() : Node("quad_node") {
     rate = std::make_shared<rclcpp::Rate>(20.0);
@@ -6,29 +7,35 @@ quadcopter::quadcopter() : Node("quad_node") {
     lidar_pos = std::make_shared<ros2_tools::msg::LidarPose>();
     lidar_sub = this->create_subscription<ros2_tools::msg::LidarPose>("lidar_data", 10, std::bind(&quadcopter::lidar_pose_cb, this, std::placeholders::_1));
     
-    pos_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("position", 10);
+    pos_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/mavros/setpoint_position/local", 10);
+
+    current_state = std::make_shared<mavros_msgs::msg::State>();
+    state_sub = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", 10, std::bind(&quadcopter::state_cb, this, std::placeholders::_1));
 
     arming_client = this->create_client<mavros_msgs::srv::CommandBool>("mavros/cmd/arming");
     command_client = this->create_client<mavros_msgs::srv::CommandLong>("mavros/cmd/command");
     set_mode_client = this->create_client<mavros_msgs::srv::SetMode>("mavros/set_mode");
     RCLCPP_INFO(this->get_logger(), "quadcopter init");
+}
 
+// 初始化化飞行控制类
+void quadcopter::flight_ctrl_init() {
     flight_ctrl = std::make_shared<flight_controller>(std::static_pointer_cast<quadcopter>(shared_from_this()));
     RCLCPP_INFO(this->get_logger(), "flight_ctrl init");
 }
 
 // 注册shutdown回调（全局），并创建spin线程处理回调
 void quadcopter::start_spin_thread() {
-    rclcpp::on_shutdown([this]() {
-        if (spin_thread && spin_thread->joinable()) {
-            spin_thread->join();
-        }
-    });
-
     spin_thread = std::make_shared<std::thread>([this]() {
         while (rclcpp::ok()) {
             rclcpp::spin_some(shared_from_this());
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    });
+
+    rclcpp::on_shutdown([this]() {
+        if (spin_thread && spin_thread->joinable()) {
+            spin_thread->join();
         }
     });
 }
@@ -45,27 +52,37 @@ void quadcopter::pre_flight_checks_loop() {
     auto mode_request = std::make_shared<mavros_msgs::srv::SetMode::Request>();
     *mode_request = offb_set_mode;
 
+    // 起飞预发布
+    geometry_msgs::msg::PoseStamped pose;
+    pose.header.frame_id = "map";
+    pose.pose.position.x = 0.0;
+    pose.pose.position.y = 0.0;
+    pose.pose.position.z = 0.1;
+    for (int i = 0; i < 20; ++i) {
+        pose.header.stamp = this->now();
+        pos_pub->publish(pose);
+        rate->sleep();
+    }
+
     rclcpp::Time last_request = this->now();
     while (rclcpp::ok()) {
-        // 定时检查是否解锁
-        if (!current_state->armed && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
-            if (arming_client->async_send_request(arm_request).valid()) {
+        pose.header.stamp = this->now();
+        pos_pub->publish(pose);
+
+        if (current_state->mode != "OFFBOARD" && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
+            if (set_mode_client->async_send_request(mode_request).valid()) { // 定时尝试OFFBOARD
+                RCLCPP_INFO(this->get_logger(), "armed and OFFBOARDING...");
+            }
+            last_request = this->now();
+        } else if (!current_state->armed && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
+            if (arming_client->async_send_request(arm_request).valid()) { // 定时检查是否解锁
                 RCLCPP_INFO(this->get_logger(), "arming...");
             }
             last_request = this->now();
-        } 
-        // 定时尝试OFFBOARD
-        else if (current_state->mode != "OFFBOARD" && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
-            if (set_mode_client->async_send_request(mode_request).valid()) {
-                RCLCPP_INFO(this->get_logger(), "armed and OFFBOARDING...");
-                target simp(0, 0, 0.5, 0);
-                flight_ctrl->fly_to_target(&simp);
-            }
-            last_request = this->now();
-        }
-        // 如果已解锁，并offbard，结束循环
-        if (current_state->armed && current_state->mode == "OFFBOARD") {
+        } else if (current_state->armed && current_state->mode == "OFFBOARD") { 
             RCLCPP_INFO(this->get_logger(), "armed and OFFBOARD success!");
+            target simp(0, 0, 0.5, 0); // 起飞点
+            flight_ctrl->fly_to_target(&simp);
             break;
         }
         rate->sleep();
@@ -80,8 +97,9 @@ void quadcopter::main_loop() {
     }
 }
 
-// 初始化quad节点控制流程（可能进行树结构改良）
+// 初始化quad节点控制流程
 void quadcopter::quad_init() {
+    flight_ctrl_init();
     start_spin_thread();
     pre_flight_checks_loop();
     main_loop();

@@ -15,7 +15,6 @@
 #include <mavros_msgs/msg/state.hpp>
 
 #include "ros2_tools/msg/lidar_pose.hpp"
-#include "flight_controller.h"
 
 class flight_controller;
 
@@ -30,7 +29,8 @@ public:
     friend class flight_controller; // 为了保险
 
     quadcopter();
-    void quad_init(); // 初始化quad节点控制流程（可能进行树结构改良）
+    void quad_init(); // 初始化quad节点控制流程
+    void flight_ctrl_init(); //初始化飞行控制类
     void start_spin_thread(); // 注册shutdown回调并创建spin线程
     void pre_flight_checks_loop(); // 起飞前检查
     void main_loop(); // 主循环
@@ -40,6 +40,7 @@ public:
 private:
     std::shared_ptr<flight_controller> flight_ctrl; // 持有控制类，增加引用次数
 
+    rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub;
     rclcpp::Subscription<ros2_tools::msg::LidarPose>::SharedPtr lidar_sub;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pos_pub;
     rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr vel_pub;

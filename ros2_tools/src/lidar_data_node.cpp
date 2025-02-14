@@ -12,6 +12,7 @@ public:
     bool using_gazebo = true; // TODO:最好改为启动参数
 
     LidarDataNode() : Node("lidar_data_node") {
+        rclcpp::QoS qos_profile = rclcpp::QoS(rclcpp::KeepLast(10)).best_effort();
         // LidarPose 发布
         lidar_pub = this->create_publisher<ros2_tools::msg::LidarPose>("lidar_data", 10);
         RCLCPP_INFO(this->get_logger(), "lidar_data publisher created");
@@ -21,7 +22,7 @@ public:
         RCLCPP_INFO(this->get_logger(), "Odometry subscription successful.");
 
         // px4_local_position 订阅
-        local_position_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("mavros/local_position/pose", 10, std::bind(&LidarDataNode::localPositionCallback, this, std::placeholders::_1));
+        local_position_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("mavros/local_position/pose", qos_profile, std::bind(&LidarDataNode::localPositionCallback, this, std::placeholders::_1));
         RCLCPP_INFO(this->get_logger(), "PX4 Local Position subscription successful.");
     }
 
