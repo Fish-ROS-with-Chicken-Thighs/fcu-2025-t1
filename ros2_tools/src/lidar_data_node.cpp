@@ -2,28 +2,41 @@
 
 #include <nav_msgs/msg/odometry.hpp>
 #include <tf2/LinearMath/Quaternion.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include "ros2_tools/msg/lidar_pose.hpp"
 
-class LidarDataNode : public rclcpp::Node
-{
+class LidarDataNode : public rclcpp::Node {
 public:
-    LidarDataNode() : Node("lidar_data_node")
-    {
+    bool using_gazebo = true; // TODO:最好改为启动参数
+
+    LidarDataNode() : Node("lidar_data_node") {
         // LidarPose 发布
         lidar_pub = this->create_publisher<ros2_tools::msg::LidarPose>("lidar_data", 10);
-        RCLCPP_INFO(this->get_logger(), "Publisher for 'lidar_data' created");
+        RCLCPP_INFO(this->get_logger(), "lidar_data publisher created");
 
         // Odometry 订阅
         odom_sub = this->create_subscription<nav_msgs::msg::Odometry>("/Odometry", 10, std::bind(&LidarDataNode::odomCallback, this, std::placeholders::_1));
         RCLCPP_INFO(this->get_logger(), "Odometry subscription successful.");
+
+        // px4_local_position 订阅
+        local_position_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("mavros/local_position/pose", 10, std::bind(&LidarDataNode::localPositionCallback, this, std::placeholders::_1));
+        RCLCPP_INFO(this->get_logger(), "PX4 Local Position subscription successful.");
     }
 
-    void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
-    {
-        const auto &pose = msg->pose.pose;
+    // 雷达数据回调
+    void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
+        if (!using_gazebo) msgDispose(msg->pose.pose); // 实机模式，处理雷达数据
+    }
 
+    // PX4数据回调
+    void localPositionCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+        if (using_gazebo) msgDispose(msg->pose); // 仿真模式，处理PX4数据
+    }
+
+    // msg统一处理函数
+    void msgDispose(const geometry_msgs::msg::Pose &pose) {
         // 转换四元数为欧拉角
         double x = pose.position.x;
         double y = pose.position.y;
@@ -38,14 +51,15 @@ public:
         if (pitch < 0) pitch += 2 * M_PI;
         if (yaw < 0) yaw += 2 * M_PI;
 
-        output.x = x;
-        output.y = y;
-        output.z = z;
-        output.roll = roll;
-        output.pitch = pitch;
-        output.yaw = yaw;
+        // 填充LidarPose消息
+        lidar_pose.x = x;
+        lidar_pose.y = y;
+        lidar_pose.z = z;
+        lidar_pose.roll = roll;
+        lidar_pose.pitch = pitch;
+        lidar_pose.yaw = yaw;
 
-        lidar_pub->publish(output);
+        lidar_pub->publish(lidar_pose);
         RCLCPP_INFO(this->get_logger(), 
                     "Position=(%.2f, %.2f, %.2f), Orientation=(%.2f, %.2f, %.2f) rad",
                     x, y, z, roll, pitch, yaw);
@@ -54,12 +68,12 @@ public:
 private:
     rclcpp::Publisher<ros2_tools::msg::LidarPose>::SharedPtr lidar_pub;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr local_position_sub;
 
-    ros2_tools::msg::LidarPose output;
+    ros2_tools::msg::LidarPose lidar_pose;
 };
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<LidarDataNode>();
     RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Lidar node completed");
