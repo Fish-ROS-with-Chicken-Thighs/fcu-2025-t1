@@ -63,7 +63,11 @@ class vision_pub_node(Node):
 if __name__ == '__main__':
     rclpy.init(args=None)
     node = vision_pub_node()
-    node.main_loop()
-    cv2.destroyAllWindows()
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        node.main_loop()
+    except KeyboardInterrupt:
+        node.get_logger().info("Ctrl+C caught, shutting down.")
+    finally:
+        cv2.destroyAllWindows()
+        node.destroy_node()
+        rclpy.shutdown()

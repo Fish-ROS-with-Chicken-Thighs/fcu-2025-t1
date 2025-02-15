@@ -6,25 +6,24 @@ quadcopter::quadcopter() : Node("quad_node") {
 
     lidar_pos = std::make_shared<ros2_tools::msg::LidarPose>();
     lidar_sub = this->create_subscription<ros2_tools::msg::LidarPose>("lidar_data", 10, std::bind(&quadcopter::lidar_pose_cb, this, std::placeholders::_1));
-    
-    pos_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/mavros/setpoint_position/local", 10);
-
     current_state = std::make_shared<mavros_msgs::msg::State>();
     state_sub = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", 10, std::bind(&quadcopter::state_cb, this, std::placeholders::_1));
+
+    pos_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/mavros/setpoint_position/local", 10);
 
     arming_client = this->create_client<mavros_msgs::srv::CommandBool>("mavros/cmd/arming");
     command_client = this->create_client<mavros_msgs::srv::CommandLong>("mavros/cmd/command");
     set_mode_client = this->create_client<mavros_msgs::srv::SetMode>("mavros/set_mode");
-    RCLCPP_INFO(this->get_logger(), "quadcopter init");
+    RCLCPP_INFO(this->get_logger(), "quadcopter setup");
 }
 
 // 初始化化飞行控制类
 void quadcopter::flight_ctrl_init() {
     flight_ctrl = std::make_shared<flight_controller>(std::static_pointer_cast<quadcopter>(shared_from_this()));
-    RCLCPP_INFO(this->get_logger(), "flight_ctrl init");
+    RCLCPP_INFO(this->get_logger(), "flight controller init");
 }
 
-// 注册shutdown回调（全局），并创建spin线程处理回调
+// 注册shutdown回调，并创建spin线程处理回调
 void quadcopter::start_spin_thread() {
     spin_thread = std::make_shared<std::thread>([this]() {
         while (rclcpp::ok()) {
@@ -42,32 +41,28 @@ void quadcopter::start_spin_thread() {
 
 // 起飞前检查
 void quadcopter::pre_flight_checks_loop() {
-    mavros_msgs::srv::CommandBool::Request arm_cmd;
-    arm_cmd.value = true;
-    auto arm_request = std::make_shared<mavros_msgs::srv::CommandBool::Request>();
-    *arm_request = arm_cmd;
-
     mavros_msgs::srv::SetMode::Request offb_set_mode;
     offb_set_mode.custom_mode = "OFFBOARD";
     auto mode_request = std::make_shared<mavros_msgs::srv::SetMode::Request>();
     *mode_request = offb_set_mode;
 
-    // 起飞预发布
-    geometry_msgs::msg::PoseStamped pose;
-    pose.header.frame_id = "map";
-    pose.pose.position.x = 0.0;
-    pose.pose.position.y = 0.0;
-    pose.pose.position.z = 0.1;
+    mavros_msgs::srv::CommandBool::Request arm_cmd;
+    arm_cmd.value = true;
+    auto arm_request = std::make_shared<mavros_msgs::srv::CommandBool::Request>();
+    *arm_request = arm_cmd;
+
+    // 起飞点预发布
+    target simp(0, 0, 0.5, 0);
     for (int i = 0; i < 20; ++i) {
-        pose.header.stamp = this->now();
-        pos_pub->publish(pose);
+        target.pose_stamped.header.stamp = this->now();
+        pos_pub->publish(target.pose_stamped);
         rate->sleep();
     }
 
     rclcpp::Time last_request = this->now();
     while (rclcpp::ok()) {
-        pose.header.stamp = this->now();
-        pos_pub->publish(pose);
+        target.pose_stamped.header.stamp = this->now();
+        pos_pub->publish(target.pose_stamped);
 
         if (current_state->mode != "OFFBOARD" && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
             if (set_mode_client->async_send_request(mode_request).valid()) { // 定时尝试OFFBOARD
@@ -81,8 +76,7 @@ void quadcopter::pre_flight_checks_loop() {
             last_request = this->now();
         } else if (current_state->armed && current_state->mode == "OFFBOARD") { 
             RCLCPP_INFO(this->get_logger(), "armed and OFFBOARD success!");
-            target simp(0, 0, 0.5, 0); // 起飞点
-            flight_ctrl->fly_to_target(&simp);
+            flight_ctrl->fly_to_target(&simp); // 起飞点
             break;
         }
         rate->sleep();
