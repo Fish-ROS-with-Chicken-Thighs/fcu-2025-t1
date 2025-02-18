@@ -18,6 +18,7 @@ public:
     flight_controller(std::shared_ptr<quadcopter> quad_node);
     void fly_to_target(target* target); // target定点移动
     void fly_by_velocity(velocity* velocity); // velocity速度飞行，单次发布
+    void fly_by_vel_duration(velocity* velocity, float duration); // velocity速度飞行，发布持续duration
     void fly_by_path(path* path); // 路径航点飞行，已兼容target版本
 
 private:

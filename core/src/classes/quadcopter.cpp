@@ -54,15 +54,15 @@ void quadcopter::pre_flight_checks_loop() {
     // 起飞点预发布
     target simp(0, 0, 0.5, 0);
     for (int i = 0; i < 20; ++i) {
-        target.pose_stamped.header.stamp = this->now();
-        pos_pub->publish(target.pose_stamped);
+        simp.pose_stamped.header.stamp = this->now();
+        pos_pub->publish(simp.pose_stamped);
         rate->sleep();
     }
 
     rclcpp::Time last_request = this->now();
     while (rclcpp::ok()) {
-        target.pose_stamped.header.stamp = this->now();
-        pos_pub->publish(target.pose_stamped);
+        simp.pose_stamped.header.stamp = this->now();
+        pos_pub->publish(simp.pose_stamped);
 
         if (current_state->mode != "OFFBOARD" && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
             if (set_mode_client->async_send_request(mode_request).valid()) { // 定时尝试OFFBOARD
@@ -85,8 +85,27 @@ void quadcopter::pre_flight_checks_loop() {
 
 // 主循环
 void quadcopter::main_loop() {
+
+    target first_point(1.0, 0, 0.5, 0); // 第一个目标点
+    velocity first_vel(0.1, 0, 0, 0); // 第一段速度
+    path path1; // 第一段路径
+    path1.add_waypoint(target(1.0, 0, 0.5, 0)); // 被移除
+    path1.add_waypoint(target(0, 1.0, 0.5, 0));
+    path1.add_waypoint(target(-1.0, 0, 0.5, 0));
+    path1.add_waypoint(target(0, -1.0, 0.5, 0));
+    path1.remove_waypoint(0); // 移除第一个点
+
+    int state = 0; // TODO: 积分赛后改写状态机
     while (rclcpp::ok()) {
-        //int mode = 0;
+        if(state == 0) {
+            flight_ctrl->fly_to_target(&first_point);
+            RCLCPP_INFO(this->get_logger(), "到达第一个点");
+            flight_ctrl->fly_by_vel_duration(&first_vel, 5.0);
+            RCLCPP_INFO(this->get_logger(), "第一次速度飞行结束");
+            flight_ctrl->fly_by_path(&path1);
+            RCLCPP_INFO(this->get_logger(), "第一段路径飞行结束");
+            state = 1;
+        }
         rate->sleep();
     }
 }

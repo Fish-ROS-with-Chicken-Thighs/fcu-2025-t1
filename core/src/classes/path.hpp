@@ -14,7 +14,7 @@ public:
         waypoints.push_back(waypoint);
     }
 
-    // 删除航点，默认尾部
+    // 删除航点，默认从尾部开始删除
     void remove_waypoint(size_t erase_num = SIZE_MAX) {
         if (waypoints.empty()) {
             std::cerr << "Waypoints list is empty, nothing to remove!" << std::endl;

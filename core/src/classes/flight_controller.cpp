@@ -32,6 +32,18 @@ void flight_controller::fly_by_velocity(velocity* velocity) {
     rate->sleep();
 }
 
+// velocity速度飞行，发布持续duration
+void flight_controller::fly_by_vel_duration(velocity* velocity, float duration) {
+    rclcpp::Time start_time = this->now();
+    while (rclcpp::ok()) {
+        rclcpp::Time current_time = this->now();
+        auto elapsed_time = current_time - start_time;
+        if (elapsed_time.seconds() < duration) fly_by_velocity(velocity);  // 发布速度
+        rate->sleep();
+    }
+}
+
+
 // 路径航点飞行，已兼容target版本
 void flight_controller::fly_by_path(path* path) {
     target waypoint;

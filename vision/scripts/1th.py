@@ -10,7 +10,7 @@ class vision_pub_node(Node):
     def __init__(self):
         super().__init__('vision_pub')
         self.pub = self.create_publisher(String, 'vision', 10)
-        self.rate = rclpy.rate.Rate(20) # 20hz
+        self.rate = rclpy.rate.Rate(20)
 
     def main_loop(self):
         try:
