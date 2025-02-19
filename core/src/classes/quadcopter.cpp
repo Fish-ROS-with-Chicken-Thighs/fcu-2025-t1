@@ -86,7 +86,6 @@ void quadcopter::pre_flight_checks_loop() {
 
 // 主循环
 void quadcopter::main_loop() {
-
     target first_point(1.0, 0, 0.5, 0); // 第一个目标点
     velocity first_vel(0.1, 0, 0); // 第一段速度
     path path1; // 第一段路径
