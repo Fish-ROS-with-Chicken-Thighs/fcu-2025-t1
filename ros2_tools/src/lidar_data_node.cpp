@@ -61,9 +61,14 @@ public:
         lidar_pose.yaw = yaw;
 
         lidar_pub->publish(lidar_pose);
-        RCLCPP_INFO(this->get_logger(), 
-                    "Position=(%.2f, %.2f, %.2f), Orientation=(%.2f, %.2f, %.2f) rad",
-                    x, y, z, roll, pitch, yaw);
+
+        static int counter = 0;
+        if (++counter >= 5) {
+            RCLCPP_INFO(this->get_logger(), 
+                        "Position=(%.2f, %.2f, %.2f), Orientation=(%.2f, %.2f, %.2f) rad",
+                        x, y, z, roll, pitch, yaw);
+            counter = 0;
+        }
     }
 
 private:
