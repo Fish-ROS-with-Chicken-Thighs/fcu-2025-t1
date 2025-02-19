@@ -30,7 +30,7 @@ public:
     float get_yaw() const { return std::atan2(2.0 * (pose_stamped.pose.orientation.z * pose_stamped.pose.orientation.w), 
                                         1.0 - 2.0 * (pose_stamped.pose.orientation.z * pose_stamped.pose.orientation.z)); }
 
-    // 允许 target 直接转换为 PoseStamped，慎用因为时间戳会被覆盖
+    // 允许 target 直接转换为 PoseStamped
     operator geometry_msgs::msg::PoseStamped&() { return pose_stamped; }
     operator const geometry_msgs::msg::PoseStamped&() const { return pose_stamped; }
 };

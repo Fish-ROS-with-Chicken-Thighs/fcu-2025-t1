@@ -7,6 +7,7 @@
 #include "path.hpp"
 
 #define pi 3.14
+constexpr float Default_Pos_Check_Distance=0.2; 
 
 class quadcopter;
 class target;
@@ -26,7 +27,7 @@ private:
     std::shared_ptr<rclcpp::Rate> rate;
 
     // 自身位置检查，distance为误差默认0.1
-    bool pos_check(target* target, float distance = 0.1);
+    bool pos_check(target* target, float distance = Default_Pos_Check_Distance);
     // 重载严格检查，多维误差
     bool pos_check(target* target, float distance_x, float distance_y, float distance_z);
 };

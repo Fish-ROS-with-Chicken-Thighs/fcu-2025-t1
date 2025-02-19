@@ -14,19 +14,17 @@ public:
         waypoints.push_back(waypoint);
     }
 
-    // 删除航点，默认从尾部开始删除
-    void remove_waypoint(size_t erase_num = SIZE_MAX) {
+    // 删除航点
+    void remove_waypoint(size_t erase_num) {
         if (waypoints.empty()) {
-            std::cerr << "Waypoints list is empty, nothing to remove!" << std::endl;
+            std::cerr << "path:路径已经删空！" << std::endl;
             return;
         }
-
-        if (erase_num == SIZE_MAX) { erase_num = waypoints.size(); } // 动态计算默认值
 
         if (erase_num < waypoints.size()) {
             waypoints.erase(waypoints.begin() + erase_num);
         } else {
-            std::cerr << "Invalid waypoint index: " << erase_num << std::endl;
+            std::cerr << "path:非法航点号:" << erase_num << std::endl;
         }
     }
 

@@ -8,7 +8,7 @@ void flight_controller::fly_to_target(target* target) {
         target->pose_stamped.header.stamp = rclcpp::Clock().now();
         quad_node->pos_pub->publish(target->pose_stamped);
         rate->sleep();
-    } while (!pos_check(target));
+    } while (rclcpp::ok() && !pos_check(target));
 }
 
 // 自身位置检查，distance为误差默认0.1
@@ -29,27 +29,31 @@ bool flight_controller::pos_check(target* target, float distance_x, float distan
 void flight_controller::fly_by_velocity(velocity* velocity) {
     velocity->twist_stamped.header.stamp = rclcpp::Clock().now();
     quad_node->vel_pub->publish(velocity->twist_stamped);
-    rate->sleep();
 }
 
 // velocity速度飞行，发布持续duration
 void flight_controller::fly_by_vel_duration(velocity* velocity, float duration) {
-    rclcpp::Time start_time = this->now();
-    while (rclcpp::ok()) {
-        rclcpp::Time current_time = this->now();
-        auto elapsed_time = current_time - start_time;
-        if (elapsed_time.seconds() < duration) fly_by_velocity(velocity);  // 发布速度
+    rclcpp::Time start_time = rclcpp::Clock().now();
+    rclcpp::Time current_time = rclcpp::Clock().now();
+    auto elapsed_time = current_time - start_time;
+
+    while (elapsed_time.seconds() < duration) {
+        current_time = rclcpp::Clock().now();
+        elapsed_time = current_time - start_time;
+        fly_by_velocity(velocity);  // 发布速度
         rate->sleep();
     }
 }
 
-
 // 路径航点飞行，已兼容target版本
 void flight_controller::fly_by_path(path* path) {
     target waypoint;
-    if (path->get_next_waypoint(waypoint)) {
-        fly_to_target(&waypoint);
-    } else {
-        RCLCPP_INFO(this->get_logger(), "航点已全部执行完毕");
+    while(rclcpp::ok()) {
+        if (path->get_next_waypoint(waypoint)) {
+            fly_to_target(&waypoint);
+        } else {
+            RCLCPP_INFO(this->get_logger(), "航点已全部执行完毕");
+            break;
+        }
     }
 }

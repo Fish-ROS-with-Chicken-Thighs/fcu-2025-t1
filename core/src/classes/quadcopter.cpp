@@ -10,6 +10,7 @@ quadcopter::quadcopter() : Node("quad_node") {
     state_sub = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", 10, std::bind(&quadcopter::state_cb, this, std::placeholders::_1));
 
     pos_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/mavros/setpoint_position/local", 10);
+    vel_pub = this->create_publisher<geometry_msgs::msg::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 10);
 
     arming_client = this->create_client<mavros_msgs::srv::CommandBool>("mavros/cmd/arming");
     command_client = this->create_client<mavros_msgs::srv::CommandLong>("mavros/cmd/command");
@@ -64,14 +65,14 @@ void quadcopter::pre_flight_checks_loop() {
         simp.pose_stamped.header.stamp = this->now();
         pos_pub->publish(simp.pose_stamped);
 
-        if (current_state->mode != "OFFBOARD" && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
-            if (set_mode_client->async_send_request(mode_request).valid()) { // 定时尝试OFFBOARD
-                RCLCPP_INFO(this->get_logger(), "armed and OFFBOARDING...");
-            }
-            last_request = this->now();
-        } else if (!current_state->armed && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
+        if (!current_state->armed && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
             if (arming_client->async_send_request(arm_request).valid()) { // 定时检查是否解锁
                 RCLCPP_INFO(this->get_logger(), "arming...");
+            }
+            last_request = this->now();
+        } else if (current_state->mode != "OFFBOARD" && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
+            if (set_mode_client->async_send_request(mode_request).valid()) { // 定时尝试OFFBOARD
+                RCLCPP_INFO(this->get_logger(), "armed and OFFBOARDING...");
             }
             last_request = this->now();
         } else if (current_state->armed && current_state->mode == "OFFBOARD") { 
@@ -87,21 +88,31 @@ void quadcopter::pre_flight_checks_loop() {
 void quadcopter::main_loop() {
 
     target first_point(1.0, 0, 0.5, 0); // 第一个目标点
-    velocity first_vel(0.1, 0, 0, 0); // 第一段速度
+    velocity first_vel(0.1, 0, 0); // 第一段速度
     path path1; // 第一段路径
     path1.add_waypoint(target(1.0, 0, 0.5, 0)); // 被移除
     path1.add_waypoint(target(0, 1.0, 0.5, 0));
     path1.add_waypoint(target(-1.0, 0, 0.5, 0));
     path1.add_waypoint(target(0, -1.0, 0.5, 0));
+    path1.add_waypoint(target(0, 1.0, 1.5, 0));
+    path1.add_waypoint(target(-1.0, 0, 1.5, 0));
+    path1.add_waypoint(target(0, -1.0, 1.5, 0));
+    path1.add_waypoint(target(0, 1.0, 2.5, 0));
+    path1.add_waypoint(target(-1.0, 0, 2.5, 0));
+    path1.add_waypoint(target(0, -1.0, 2.5, 0));
     path1.remove_waypoint(0); // 移除第一个点
 
-    int state = 0; // TODO: 积分赛后改写状态机
+    int state = 0;
     while (rclcpp::ok()) {
         if(state == 0) {
+            // 三种移动测试
+            // 第一种：定点移动
             flight_ctrl->fly_to_target(&first_point);
             RCLCPP_INFO(this->get_logger(), "到达第一个点");
+            // 第二种：速度移动
             flight_ctrl->fly_by_vel_duration(&first_vel, 5.0);
             RCLCPP_INFO(this->get_logger(), "第一次速度飞行结束");
+            // 第三种：航点移动
             flight_ctrl->fly_by_path(&path1);
             RCLCPP_INFO(this->get_logger(), "第一段路径飞行结束");
             state = 1;
