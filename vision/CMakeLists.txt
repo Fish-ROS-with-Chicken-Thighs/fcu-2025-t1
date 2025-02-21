@@ -4,15 +4,18 @@ project(vision)
 find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME} "msg/Vision.msg")
 ament_export_dependencies(rosidl_default_runtime)
 
-rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+#rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
 install(DIRECTORY msg DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS
-    scripts/1th.py
+    scripts/vision.py
     scripts/cv_tools.py
   DESTINATION lib/${PROJECT_NAME}
 )

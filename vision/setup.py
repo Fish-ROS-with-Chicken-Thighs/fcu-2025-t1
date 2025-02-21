@@ -26,7 +26,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'vision = 2025_1th.1th:main',
+            'vision = 2025_1th.vision:main',
         ],
     },
 )
