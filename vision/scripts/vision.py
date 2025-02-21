@@ -12,7 +12,8 @@ class vision_pub_node(Node):
     def __init__(self):
         super().__init__('vision_pub')
         self.pub = self.create_publisher(Vision, 'vision', 10)
-        self.sub = self.create_subscription(Image, '/camera/ground', self.ground_callback, 1)
+        #self.sub = self.create_subscription(Image, '/camera/ground', self.ground_callback, 1) # 实机
+        self.sub = self.create_subscription(Image, '/camera_ground/image_raw', self.ground_callback, 1) # 仿真
         self.bridge = CvBridge()
         self.rate = Rate(self, 20)
         self.out = None
