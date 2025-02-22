@@ -1,9 +1,9 @@
+#!/usr/bin/env python3
 import cv2
 import numpy as np
 import rclpy
-from rclpy.node import Node
-from rclpy.rate import Rate
-from ros2_tools.msg import Vision
+from rclpy.node import Node, Rate
+from vision.msg import Vision
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import cv_tools
@@ -15,8 +15,9 @@ class vision_pub_node(Node):
         #self.sub = self.create_subscription(Image, '/camera/ground', self.ground_callback, 1) # 实机
         self.sub = self.create_subscription(Image, '/camera_ground/image_raw', self.ground_callback, 1) # 仿真
         self.bridge = CvBridge()
-        self.rate = Rate(self, 20)
+        self.rate = self.create_rate(20)
         self.out = None
+        self.get_logger().info("init complete")
     
     def ground_callback(self, msg):
         try:
@@ -25,7 +26,7 @@ class vision_pub_node(Node):
             self.get_logger().error(f"Error convert image: {e}")
             return
         # 处理并发布vision消息
-        self.process(self, cv_image)
+        self.process(cv_image)
 
     def process(self, frame):
         if self.out is not None:
@@ -53,7 +54,7 @@ class vision_pub_node(Node):
             frame_copy = frame.copy() # 展示拷贝
             frame_copy = cv_tools.filter_contours(contours, frame, frame_copy) # 过滤轮廓，并检测
 
-            cv_tools.imshow_and_save(frame_copy, out) # 展示结果，写入视频
+            cv_tools.imshow_and_save(frame, out) # 展示结果，写入视频
 
         except Exception as e:
             self.get_logger().error(f"Error occurred: {e}")
@@ -64,7 +65,8 @@ class vision_pub_node(Node):
         self.out.release()
         self.get_logger().info("Resources released.")
 
-if __name__ == '__main__':
+# entry_point入口
+def main():
     rclpy.init(args=None)
     node = vision_pub_node()
     try:
@@ -77,3 +79,6 @@ if __name__ == '__main__':
         cv2.destroyAllWindows()
         node.destroy_node()
         rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

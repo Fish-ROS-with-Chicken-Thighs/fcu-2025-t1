@@ -7,7 +7,7 @@ package_name = 'vision'
 setup(
     name=package_name,
     version='0.0.0',
-    packages=find_packages(),
+    packages=find_packages(include=['vision', 'scripts']),  # 显式包含 scripts 目录
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml'])
@@ -26,7 +26,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'vision = 2025_1th.vision:main',
+            'vision_node = scripts.vision_node:main'  # 确保路径正确
         ],
     },
 )

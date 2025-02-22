@@ -15,7 +15,7 @@ ament_export_dependencies(rosidl_default_runtime)
 
 install(DIRECTORY msg DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS
-    scripts/vision.py
+    scripts/vision_node.py
     scripts/cv_tools.py
   DESTINATION lib/${PROJECT_NAME}
 )
