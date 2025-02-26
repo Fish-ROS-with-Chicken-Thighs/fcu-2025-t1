@@ -5,8 +5,8 @@ flight_controller::flight_controller(std::shared_ptr<quadcopter> quad_node) : No
 // target定点移动
 void flight_controller::fly_to_target(target* target) {
     do {
-        target->pose_stamped.header.stamp = rclcpp::Clock().now();
-        quad_node->pos_pub->publish(target->pose_stamped);
+        target->set_time(rclcpp::Clock().now());
+        quad_node->pos_pub->publish(target->get_pose());
         rate->sleep();
     } while (rclcpp::ok() && !pos_check(target));
 }
@@ -27,8 +27,8 @@ bool flight_controller::pos_check(target* target, float distance_x, float distan
 
 // velocity速度飞行，单次发布
 void flight_controller::fly_by_velocity(velocity* velocity) {
-    velocity->twist_stamped.header.stamp = rclcpp::Clock().now();
-    quad_node->vel_pub->publish(velocity->twist_stamped);
+    velocity->set_time(rclcpp::Clock().now());
+    quad_node->vel_pub->publish(velocity->get_twist());
 }
 
 // velocity速度飞行，发布持续duration
@@ -36,10 +36,17 @@ void flight_controller::fly_by_vel_duration(velocity* velocity, float duration) 
     rclcpp::Time start_time = rclcpp::Clock().now();
     rclcpp::Time current_time = rclcpp::Clock().now();
     auto elapsed_time = current_time - start_time;
+    float start_altitude = quad_node->lidar_pos->z; // 记录初始高度
 
     while (elapsed_time.seconds() < duration) {
         current_time = rclcpp::Clock().now();
         elapsed_time = current_time - start_time;
+
+        // 修改z轴反馈
+        if (std::abs(start_altitude - quad_node->lidar_pos->z) > 0.1) {
+            velocity->set_vx(start_altitude - quad_node->lidar_pos->z);
+        }
+
         fly_by_velocity(velocity);  // 发布速度
         rate->sleep();
     }

@@ -55,15 +55,15 @@ void quadcopter::pre_flight_checks_loop() {
     // 起飞点预发布
     target simp(0, 0, 0.5, 0);
     for (int i = 0; i < 20; ++i) {
-        simp.pose_stamped.header.stamp = this->now();
-        pos_pub->publish(simp.pose_stamped);
+        simp.set_time(this->now());
+        pos_pub->publish(simp.get_pose());
         rate->sleep();
     }
 
     rclcpp::Time last_request = this->now();
     while (rclcpp::ok()) {
-        simp.pose_stamped.header.stamp = this->now();
-        pos_pub->publish(simp.pose_stamped);
+        simp.set_time(this->now());
+        pos_pub->publish(simp.get_pose());
 
         if (!current_state->armed && (this->now() - last_request > rclcpp::Duration::from_seconds(1.0))) {
             if (arming_client->async_send_request(arm_request).valid()) { // 定时检查是否解锁
@@ -86,6 +86,8 @@ void quadcopter::pre_flight_checks_loop() {
 
 // 主循环
 void quadcopter::main_loop() {
+    /* -----------------------示例-------------------------------
+    -------------------------------------------------------------
     target first_point(1.0, 0, 0.5, 0); // 第一个目标点
     velocity first_vel(0.1, 0, 0); // 第一段速度
     path path1; // 第一段路径
@@ -115,6 +117,27 @@ void quadcopter::main_loop() {
             flight_ctrl->fly_by_path(&path1);
             RCLCPP_INFO(this->get_logger(), "第一段路径飞行结束");
             state = 1;
+        }
+        rate->sleep();
+    }
+    ------------------------------------------------------------
+    --------------------------示例----------------------------*/
+
+    target first_point(0.0, 0.0, 1.5, 0.0); // 定高1m
+    velocity vel1(0.1, 0.0, 0.0);
+    velocity vel2(-0.1, 0.0, 0.0);
+
+    int state = 0;
+    while (rclcpp::ok()) {
+        if(state == 0) {
+            flight_ctrl->fly_to_target(&first_point);
+            RCLCPP_INFO(this->get_logger(), "到达指定高度");
+            state = 1;
+        } else {
+            RCLCPP_INFO(this->get_logger(), "前进");
+            flight_ctrl->fly_by_vel_duration(&vel1, 5.0);
+            //RCLCPP_INFO(this->get_logger(), "后退");
+            //flight_ctrl->fly_by_vel_duration(&vel2, 10.0);
         }
         rate->sleep();
     }
