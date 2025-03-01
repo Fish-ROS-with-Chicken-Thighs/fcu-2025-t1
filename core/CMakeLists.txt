@@ -33,5 +33,6 @@ set(CMAKE_INSTALL_RPATH /usr/local/lib)
 
 install(TARGETS quad_node DESTINATION lib/${PROJECT_NAME})
 #install(DIRECTORY msg srv DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/)
 
 ament_package()

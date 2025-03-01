@@ -48,7 +48,7 @@ void flight_controller::fly_by_vel_duration(velocity* velocity, float duration) 
         }
 
         fly_by_velocity(velocity);  // 发布速度
-        rate->sleep();
+        quad_node->rate->sleep();
     }
 }
 

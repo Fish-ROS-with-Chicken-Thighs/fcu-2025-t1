@@ -63,7 +63,7 @@ public:
         lidar_pub->publish(lidar_pose);
 
         static int counter = 0;
-        if (++counter >= 5) {
+        if (++counter >= 50) {
             RCLCPP_INFO(this->get_logger(), 
                         "Position=(%.2f, %.2f, %.2f), Orientation=(%.2f, %.2f, %.2f) rad",
                         x, y, z, roll, pitch, yaw);

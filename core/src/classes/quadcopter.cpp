@@ -135,9 +135,9 @@ void quadcopter::main_loop() {
             state = 1;
         } else {
             RCLCPP_INFO(this->get_logger(), "前进");
-            flight_ctrl->fly_by_vel_duration(&vel1, 5.0);
-            //RCLCPP_INFO(this->get_logger(), "后退");
-            //flight_ctrl->fly_by_vel_duration(&vel2, 10.0);
+            flight_ctrl->fly_by_vel_duration(&vel1, 10.0);
+            RCLCPP_INFO(this->get_logger(), "后退");
+            flight_ctrl->fly_by_vel_duration(&vel2, 10.0);
         }
         rate->sleep();
     }
