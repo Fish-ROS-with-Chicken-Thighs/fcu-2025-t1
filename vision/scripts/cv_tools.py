@@ -128,8 +128,25 @@ def line_detect(frame):
     lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=10)
 
     if lines is not None:
+        best_line = None
+        best_length = 0
         for line in lines:
-            x1, y1, x2, y2 = line[0]
+            line_length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2) # 计算直线长度，筛选最长
+            if line_length > best_length:
+                best_length = line_length
+                best_line = line
+
+        if best_line is not None:
+            x1, y1, x2, y2 = best_line[0]
             cv2.line(frame_copy , (x1, y1), (x2, y2), (0, 0, 255), 2) # 绘制直线
+
+            #lateral_error > 0：线路在无人机右侧，需要向右移动。< 0：线路在无人机左侧，需要向左移动。
+            lateral_error = (x1 + x2)//2 - frame.shape[1]//2 # 线中心-图形中心
+
+            #angle_error > 0：线路向右偏，需要顺时针旋转（增加偏航角）。angle_error < 0：线路向左偏，需要逆时针旋转（减少偏航角）。
+            line_angle = np.arctan2(y2 - y1, x2 - x1)  # 弧度制
+            #无人机的目标航向是沿图像垂直方向（即 desired_angle = 0）
+            angle_error = line_angle
+
             #ros发布
     return frame_copy
