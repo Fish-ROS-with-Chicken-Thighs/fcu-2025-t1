@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import rclpy
 
 #---------------------------------------------
 #--------------------基本类--------------------
@@ -15,7 +16,6 @@ def get_video_info(capture):
 
     return width, height, fps, out
 
-
 # 展示&保存视频
 def imshow_and_save(frame, out):
     windows_name: str = 'Camera 720p'
@@ -23,20 +23,18 @@ def imshow_and_save(frame, out):
     cv2.imshow(windows_name, frame)
     out.write(frame) # 写入视频
 
-
 # 标记坐标
-def mark(contour, frame):
+def mark(contour, frame_copy):
     x, y, w, h = cv2.boundingRect(contour)
-    cv2.rectangle(frame, (x - 5, y - 5), (x + w + 5, y + h + 5), (0, 255, 0), 2) # 画外接矩形
+    cv2.rectangle(frame_copy, (x - 5, y - 5), (x + w + 5, y + h + 5), (0, 255, 0), 2) # 画外接矩形
     # 找到图形轮廓中心坐标
     M = cv2.moments(contour)
     center_x = int(M['m10'] / M['m00'])
     center_y = int(M['m01'] / M['m00'])
-    cv2.circle(frame, (center_x, center_y), 1, (255, 0, 255), 1)
-    cv2.putText(frame, "[" + str(center_x) + "," + str(center_y) + "]", (center_x, center_y - 10),
+    cv2.circle(frame_copy, (center_x, center_y), 1, (255, 0, 255), 1)
+    cv2.putText(frame_copy, "[" + str(center_x) + "," + str(center_y) + "]", (center_x, center_y - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
     
-
 # 逆光补偿
 def backlight_compensation(frame):
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
@@ -53,7 +51,7 @@ def backlight_compensation(frame):
 #-------------------------------------------------
 
 # 过滤轮廓，并执行检测
-def filter_contours(contours, frame, frame_copy):
+def detect_contours(contours, frame):
     if contours is not None:
         for contour in contours:
             area = cv2.contourArea(contour) # 轮廓面积
@@ -61,12 +59,11 @@ def filter_contours(contours, frame, frame_copy):
             if area > 10000 and area < 30000 and w / h > 0.8 and w / h < 1.25:
                 frame_ROI = frame[y-5:y + h+5,x-5:x + w+5]
                 if frame_ROI is not None and frame_ROI.shape[0] > 0 and frame_ROI.shape[1] > 0:
-                    frame_copy = hsv_detect(frame_copy, frame_ROI, contour, area) # 霍夫图形检测，注意这里操作的是frame_copy
-    return frame_copy
-
+                    hsv_detect(frame, frame_ROI, contour, area)
 
 # hsv空间的霍夫检测
 def hsv_detect(frame, ROI_img, ROI_contour, ROI_contour_area):
+    frame_copy = frame.copy()
     x, y, w, h = cv2.boundingRect(ROI_contour)
 
     hsv_colors = {
@@ -101,10 +98,10 @@ def hsv_detect(frame, ROI_img, ROI_contour, ROI_contour_area):
                     for i in circles[0, :]:
                         center = (shift_x+i[0], shift_y+i[1])
                         radius = i[2]
-                        cv2.circle(frame, center, radius, (0, 0, 255), 2)
-                        cv2.putText(frame, f"{color_name}_circle", (shift_x+i[0] - 40, shift_y+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                        cv2.circle(frame_copy, center, radius, (0, 0, 255), 2)
+                        cv2.putText(frame_copy, f"{color_name}_circle", (shift_x+i[0] - 40, shift_y+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                                     (255, 0, 0), 1)
-                    #mark(ROI_contour, frame)
+                    mark(ROI_contour, frame_copy)
 
                 # 多边形
                 approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True) # 逼近精度4%轮廓周长
@@ -114,29 +111,25 @@ def hsv_detect(frame, ROI_img, ROI_contour, ROI_contour_area):
                     center_y = int(M['m01'] / M['m00']) # 当前轮廓中心
 
                     if len(approx) == 3:  # 三边
-                        cv2.drawContours(frame, [approx], 0, (0, 0, 255), 2)
-                        cv2.putText(frame, f"{color_name}_triangle", (center_x - 40, center_y - 40),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                                    (255, 0, 0), 1)
-                        #mark(ROI_contour, frame)
+                        mark(ROI_contour, frame_copy)
+                        cv2.drawContours(frame_copy, [approx], 0, (0, 0, 255), 2)
+                        cv2.putText(frame_copy, f"{color_name}_triangle", (center_x - 40, center_y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
                     elif len(approx) == 4:  # 四边
-                        cv2.drawContours(frame, [approx], 0, (0, 0, 255), 2)
-                        cv2.putText(frame, f"{color_name}_square", (center_x - 40, center_y - 40),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                                    (255, 0, 0), 1)
-                        #mark(ROI_contour, frame)
-        return frame
+                        mark(ROI_contour, frame_copy)
+                        cv2.drawContours(frame_copy, [approx], 0, (0, 0, 255), 2)
+                        cv2.putText(frame_copy, f"{color_name}_square", (center_x - 40, center_y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+    return frame_copy
  
 # 霍夫直线
-def line_detect(img):
-    img = cv2.medianBlur(img, 5) #  椒盐滤波
-    edges = cv2.Canny(img, 50, 150, apertureSize=3)
-
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, 50, 50, 5)
+def line_detect(frame):
+    frame_copy = frame.copy()
+    frame = cv2.medianBlur(frame, 5) #  椒盐滤波
+    edges = cv2.Canny(frame, 50, 150, apertureSize=3)
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=10)
 
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]
-            cv2.line(img , (x1, y1), (x2, y2), (0, 0, 255), 2) # 绘制直线
-    return img
-
+            cv2.line(frame_copy , (x1, y1), (x2, y2), (0, 0, 255), 2) # 绘制直线
+            #ros发布
+    return frame_copy

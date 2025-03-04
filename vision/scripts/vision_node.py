@@ -33,20 +33,18 @@ class vision_pub_node(Node):
         try:            
             bl_frame = cv_tools.backlight_compensation(frame) # 逆光补偿
             #cv2.imshow('逆光补偿效果', bl_frame)
-            #cv2.waitKey(1)
 
-            hough_line_frame = cv_tools.line_detect(bl_frame) # 霍夫直线
-            cv2.imshow('霍夫直线效果', hough_line_frame)
+            hl_copy = cv_tools.line_detect(bl_frame) # 霍夫直线
+            cv2.imshow('霍夫直线效果', hl_copy)
+            
+            gray_frame = cv2.cvtColor(bl_frame, cv2.COLOR_BGR2GRAY) # 灰度
+            _, thresh_frame = cv2.threshold(gray_frame, 150, 255, cv2.THRESH_BINARY) # 二值化处理
+            cv2.imshow('预处理最终效果', thresh_frame)
             cv2.waitKey(1)
-            
-            # gray_frame = cv2.cvtColor(bl_frame, cv2.COLOR_BGR2GRAY) # 灰度
-            # _, thresh_frame = cv2.threshold(gray_frame, 150, 255, cv2.THRESH_BINARY) # 二值化处理
-            # cv2.imshow('预处理最终效果', thresh_frame)
 
-            # contours, _ = cv2.findContours(thresh_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) # 提取轮廓
-            
-            # frame_copy = frame.copy() # 展示拷贝
-            # frame_copy = cv_tools.filter_contours(contours, frame, frame_copy) # 过滤轮廓，并检测
+            #contours, _ = cv2.findContours(thresh_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) # 提取轮廓
+            #detect_copy = cv_tools.detect_contours(contours, frame) # 过滤轮廓，并检测
+            #cv2.imshow('图形检测效果', detect_copy)
 
         except Exception as e:
             self.get_logger().error(f"Error occurred: {e}")

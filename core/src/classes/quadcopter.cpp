@@ -123,37 +123,37 @@ void quadcopter::main_loop() {
     ------------------------------------------------------------
     --------------------------示例----------------------------*/
 
-    int case = 0;
+    int flag = 0;
+    target first_point(0.0, 0.0, 1.5, 0.0);
+    static velocity vel1(0.1, 0.0, 0.0, 0.0);
     while (rclcpp::ok()) {
-        switch (case) {
+        switch (flag) {
             case 0:
-                target first_point(0.0, 0.0, 1.5, 0.0);
                 flight_ctrl->fly_to_target(&first_point);
                 RCLCPP_INFO(this->get_logger(), "到达指定高度");
-                case = 1;
+                flag = 1;
                 break;
             case 1:
                 RCLCPP_INFO(this->get_logger(), "前进");
-                static velocity vel1(0.1, 0.0, 0.0);
-                flight_ctrl->fly_by_vel(&vel1);
-                if () {
+                flight_ctrl->fly_by_velocity(&vel1);
+                if (1) {
                     RCLCPP_INFO(this->get_logger(), "发现直线");
-                    case = 2;
+                    flag = 2;
                 }
+                break;
             case 3:
                 RCLCPP_INFO(this->get_logger(), "巡线");
-                if() {
+                if(1) {
                     RCLCPP_INFO(this->get_logger(), "发现目标");
-                    case = 4;
+                    flag = 4;
                 }
-                velocity vel2(, , 0.0);
-                flight_ctrl->fly_by_vel(&vel1)
+                //velocity vel2(, , 0.0);
                 break;
             case 4:
                 RCLCPP_INFO(this->get_logger(), "追踪");
-                if() {
+                if(1) {
                     RCLCPP_INFO(this->get_logger(), "到达目标");
-                    case = 5;
+            
                 }
                 break;
         }
