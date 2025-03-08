@@ -8,6 +8,8 @@ quadcopter::quadcopter() : Node("quad_node") {
     lidar_sub = this->create_subscription<ros2_tools::msg::LidarPose>("lidar_data", 10, std::bind(&quadcopter::lidar_pose_cb, this, std::placeholders::_1));
     current_state = std::make_shared<mavros_msgs::msg::State>();
     state_sub = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", 10, std::bind(&quadcopter::state_cb, this, std::placeholders::_1));
+    vision_msg = std::make_shared<vision::msg::Vision>();
+    vision_sub = this->create_subscription<vision::msg::Vision>("vision", 10, std::bind(&quadcopter::vision_sub_cb, this, std::placeholders::_1));
 
     pos_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/mavros/setpoint_position/local", 10);
     vel_pub = this->create_publisher<geometry_msgs::msg::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 10);
@@ -15,13 +17,13 @@ quadcopter::quadcopter() : Node("quad_node") {
     arming_client = this->create_client<mavros_msgs::srv::CommandBool>("mavros/cmd/arming");
     command_client = this->create_client<mavros_msgs::srv::CommandLong>("mavros/cmd/command");
     set_mode_client = this->create_client<mavros_msgs::srv::SetMode>("mavros/set_mode");
-    RCLCPP_INFO(this->get_logger(), "quadcopter setup");
+    RCLCPP_INFO(this->get_logger(), "飞行器初始化完成");
 }
 
 // 初始化化飞行控制类
 void quadcopter::flight_ctrl_init() {
     flight_ctrl = std::make_shared<flight_controller>(std::static_pointer_cast<quadcopter>(shared_from_this()));
-    RCLCPP_INFO(this->get_logger(), "flight controller init");
+    RCLCPP_INFO(this->get_logger(), "飞行控制类初始化完成");
 }
 
 // 注册shutdown回调，并创建spin线程处理回调
@@ -169,7 +171,7 @@ void quadcopter::quad_init() {
     main_loop();
 }
 
-// 雷达数据回调
+// lidar数据回调
 void quadcopter::lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg) {
     lidar_pos = msg;
     x = msg->x;
@@ -181,6 +183,11 @@ void quadcopter::lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg) 
 // mavros状态回调
 void quadcopter::state_cb(const mavros_msgs::msg::State::SharedPtr msg) {
     current_state = msg;
+}
+
+// vision数据回调
+void quadcopter::vision_sub_cb(const vision::msg::Vision::SharedPtr msg) {
+    vision_msg = msg;
 }
 
 // 主程序入口

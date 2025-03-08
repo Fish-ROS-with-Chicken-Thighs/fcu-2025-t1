@@ -6,15 +6,24 @@ from rclpy.node import Node, Rate
 from vision.msg import Vision
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-import cv_tools
+import cv_tools # 导入工具类
 
 class vision_pub_node(Node):
     def __init__(self):
         super().__init__('vision_pub')
-        self.pub = self.create_publisher(Vision, 'vision', 10)
-        #self.sub = self.create_subscription(Image, '/camera/ground', self.ground_callback, 1) # 实机
-        self.sub = self.create_subscription(Image, '/camera_ground/image_raw', self.ground_callback, 1) # 仿真
+        self.vision_pub = self.create_publisher(Vision, 'vision', 10)
+        #self.frame_sub = self.create_subscription(Image, '/camera/ground', self.ground_callback, 1) # 实机
+        self.frame_sub = self.create_subscription(Image, '/camera_ground/image_raw', self.ground_callback, 1) # 仿真
         self.bridge = CvBridge()
+        self.cv_tools = cv_tools.CVTools(self)  # 创建工具类实例
+        # 初始化消息
+        self.msg = Vision()
+        self.msg.is_line_detected = False
+        self.msg.lateral_error = 0
+        self.msg.angle_error = 0.0
+        self.msg.is_shape_detected = False
+        self.msg.center_x = 0.0
+        self.msg.center_y = 0.0
         self.get_logger().info("init complete")
     
     def ground_callback(self, msg):
@@ -26,10 +35,7 @@ class vision_pub_node(Node):
         self.process(cv_image) # 处理并发布vision消息
 
     def process(self, frame):
-        msg = Vision()
-        msg.is_shape_detected = False
-        msg.center_x = 0.0
-        msg.center_y = 0.0
+
         try:            
             bl_frame = cv_tools.backlight_compensation(frame) # 逆光补偿
             #cv2.imshow('逆光补偿效果', bl_frame)
@@ -45,6 +51,8 @@ class vision_pub_node(Node):
             #contours, _ = cv2.findContours(thresh_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) # 提取轮廓
             #detect_copy = cv_tools.detect_contours(contours, frame) # 过滤轮廓，并检测
             #cv2.imshow('图形检测效果', detect_copy)
+
+            self.vision_pub.pub(self.msg) # ros发布
 
         except Exception as e:
             self.get_logger().error(f"Error occurred: {e}")

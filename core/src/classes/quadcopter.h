@@ -15,6 +15,7 @@
 #include <mavros_msgs/msg/state.hpp>
 
 #include "ros2_tools/msg/lidar_pose.hpp"
+#include "vision/msg/vision.hpp"
 
 class flight_controller;
 
@@ -38,10 +39,11 @@ public:
     void arm_and_takeoff(float altitude); // 另一种起飞
 
 private:
-    std::shared_ptr<flight_controller> flight_ctrl; // 持有控制类，增加引用次数
+    std::shared_ptr<flight_controller> flight_ctrl; // 持有飞行控制类，增加引用次数
 
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub;
     rclcpp::Subscription<ros2_tools::msg::LidarPose>::SharedPtr lidar_sub;
+    rclcpp::Subscription<vision::msg::Vision>::SharedPtr vision_sub;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pos_pub;
     rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr vel_pub;
 
@@ -52,12 +54,16 @@ private:
     std::shared_ptr<std::thread> spin_thread;
     std::shared_ptr<rclcpp::Rate> rate;
 
-    // Lidar数据回调
+    // lidar数据回调
     std::shared_ptr<ros2_tools::msg::LidarPose> lidar_pos;
     void lidar_pose_cb(const ros2_tools::msg::LidarPose::SharedPtr msg);
 
     // mavros状态回调
     std::shared_ptr<mavros_msgs::msg::State> current_state;
     void state_cb(const mavros_msgs::msg::State::SharedPtr msg);
+
+    // vision数据回调
+    std::shared_ptr<vision::msg::Vision> vision_msg;
+    void vision_sub_cb(const vision::msg::Vision::SharedPtr msg);
 };
 #endif

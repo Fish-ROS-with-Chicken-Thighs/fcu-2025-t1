@@ -1,3 +1,6 @@
+bool is_line_detected
+int32 lateral_error
+float32 angle_error
 bool is_shape_detected
 float32 center_x
 float32 center_y
