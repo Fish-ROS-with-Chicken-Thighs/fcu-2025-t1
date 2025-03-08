@@ -7,7 +7,7 @@
 // 速度类
 class velocity {
 public:
-    velocity(float v_x, float v_y, float v_z, float v_roll=0.0, float v_pitch=0.0, float v_yaw=0.0) {
+    velocity(float v_x, float v_y, float v_z, float v_yaw=0.0, float v_pitch=0.0, float v_roll=0.0) {
         twist_stamped.twist.linear.x = v_x;
         twist_stamped.twist.linear.y = v_y;
         twist_stamped.twist.linear.z = v_z;

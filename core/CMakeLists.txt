@@ -43,7 +43,7 @@ ament_target_dependencies(quad_node rclcpp geometry_msgs nav_msgs std_msgs mavro
 set(CMAKE_INSTALL_RPATH /usr/local/lib)
 
 # 可执行文件安装
-install(TARGETS quad_node DESTINATION lib/${PROJECT_NAME} RUNTIME DESTINATION bin)
+install(TARGETS quad_node DESTINATION lib/${PROJECT_NAME})
 #install(DIRECTORY msg srv DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY launch/ DESTINATION share/${PROJECT_NAME}/)
 

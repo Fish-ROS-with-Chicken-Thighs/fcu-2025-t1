@@ -11,6 +11,7 @@ class CVTools:
     #---------------------------------------------
 
     # 获取视频信息
+    @staticmethod
     def get_video_info(capture):
         width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -21,6 +22,7 @@ class CVTools:
         return width, height, fps, out
 
     # 展示&保存视频
+    @staticmethod
     def imshow_and_save(frame, out):
         windows_name: str = 'Camera 720p'
         cv2.namedWindow(windows_name, cv2.WINDOW_NORMAL) #窗口大小任意调节
@@ -28,6 +30,7 @@ class CVTools:
         out.write(frame) # 写入视频
 
     # 标记坐标
+    @staticmethod
     def mark(contour, frame_copy):
         x, y, w, h = cv2.boundingRect(contour)
         cv2.rectangle(frame_copy, (x - 5, y - 5), (x + w + 5, y + h + 5), (0, 255, 0), 2) # 画外接矩形
@@ -40,6 +43,7 @@ class CVTools:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
         
     # 逆光补偿
+    @staticmethod
     def backlight_compensation(frame):
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
@@ -125,16 +129,17 @@ class CVTools:
         return frame_copy
     
     # 霍夫直线
-    def line_detect(frame, node):
+    def line_detect(self, frame):
         frame_copy = frame.copy()
-        frame = cv2.medianBlur(frame, 5) #  椒盐滤波
+        frame = cv2.medianBlur(frame, 3) #  椒盐滤波
         edges = cv2.Canny(frame, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=10)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=50)
 
         if lines is not None:
             best_line = None
             best_length = 0
             for line in lines:
+                x1, y1, x2, y2 = line[0]
                 line_length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2) # 计算直线长度，筛选最长
                 if line_length > best_length:
                     best_length = line_length
@@ -151,11 +156,23 @@ class CVTools:
                 # angle_error > 0：线路右偏，需要顺时针增加yaw
                 # angle_error < 0：线路左偏，需要逆时针减少yaw
                 line_angle = np.arctan2(y2 - y1, x2 - x1)  # 弧度制
+                # 确保角度在 [-π/2, π/2] 范围内
+                if line_angle > np.pi / 2:
+                    line_angle -= np.pi  # 将角度从 [π, 3π/2] 映射到 [-π/2, π/2]
+                elif line_angle < -np.pi / 2:
+                    line_angle += np.pi  # 将角度从 [-3π/2, -π] 映射到 [-π/2, π/2]
+                    
                 # 航向沿图像垂直方向（即 desired_angle = 0）
                 angle_error = line_angle
 
                 # 填充ros消息
-                node.msg.is_line_detected = True
-                node.msg.lateral_error = lateral_error
-                node.msg.angle_error = angle_error
+                self.node.msg.is_line_detected = True
+                self.node.msg.lateral_error = int(lateral_error)
+                self.node.msg.angle_error = angle_error
+                return frame_copy
+        
+        self.node.msg.is_line_detected = False
+        self.node.msg.lateral_error = 0
+        self.node.msg.angle_error = 0.0
         return frame_copy
+
