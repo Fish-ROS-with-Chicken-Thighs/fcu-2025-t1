@@ -128,7 +128,7 @@ class CVTools:
                             cv2.putText(frame_copy, f"{color_name}_square", (center_x - 40, center_y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
         return frame_copy
     
-    # 霍夫直线
+    # 霍夫直线，TODO：卡尔曼滤波
     def line_detect(self, frame):
         frame_copy = frame.copy()
         frame = cv2.medianBlur(frame, 3) #  椒盐滤波
@@ -151,14 +151,18 @@ class CVTools:
 
                 # lateral_error > 0：线路在无人机右侧，需要向右移动
                 # lateral_error < 0：线路在无人机左侧，需要向左移动
-                lateral_error = (x1 + x2)//2 - frame.shape[1]//2 # 线中心-图形中心
+                lateral_error = (y1 + y2)//2 - frame.shape[1]//2 # 线中心-图形中心
 
                 # angle_error > 0：线路右偏，需要顺时针增加yaw
                 # angle_error < 0：线路左偏，需要逆时针减少yaw
                 line_angle = np.arctan2(y2 - y1, x2 - x1)
-                line_angle = line_angle % (2 * np.pi)  # 归一化[0, 2π]和yaw同步
+                line_angle_body = line_angle - np.pi / 2 # 转换为机体坐标系
+                line_angle_body = line_angle_body % (2 * np.pi) # 归一化[0, 2π]和yaw同步
                 desired_angle = 0  # 期望角度为0（垂直方向）
                 angle_error = line_angle - desired_angle
+                angle_error = angle_error % (2 * np.pi)  # 归一化到 [0, 2π]
+                if angle_error > np.pi: # 消除大于π的下半圆歧义，转换为负值表示左偏
+                    angle_error -= 2 * np.pi
 
                 # 填充ros消息
                 self.node.msg.is_line_detected = True
