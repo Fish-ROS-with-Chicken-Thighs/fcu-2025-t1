@@ -155,15 +155,10 @@ class CVTools:
 
                 # angle_error > 0：线路右偏，需要顺时针增加yaw
                 # angle_error < 0：线路左偏，需要逆时针减少yaw
-                line_angle = np.arctan2(y2 - y1, x2 - x1)  # 弧度制
-                # 确保角度在 [-π/2, π/2] 范围内
-                if line_angle > np.pi / 2:
-                    line_angle -= np.pi  # 将角度从 [π, 3π/2] 映射到 [-π/2, π/2]
-                elif line_angle < -np.pi / 2:
-                    line_angle += np.pi  # 将角度从 [-3π/2, -π] 映射到 [-π/2, π/2]
-                    
-                # 航向沿图像垂直方向（即 desired_angle = 0）
-                angle_error = line_angle
+                line_angle = np.arctan2(y2 - y1, x2 - x1)
+                line_angle = line_angle % (2 * np.pi)  # 归一化[0, 2π]和yaw同步
+                desired_angle = 0  # 期望角度为0（垂直方向）
+                angle_error = line_angle - desired_angle
 
                 # 填充ros消息
                 self.node.msg.is_line_detected = True
