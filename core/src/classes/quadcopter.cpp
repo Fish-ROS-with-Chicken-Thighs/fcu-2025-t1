@@ -126,8 +126,8 @@ void quadcopter::main_loop() {
     --------------------------示例----------------------------*/
 
     int flag = 0;
-    target first_point(0.0, 0.0, 0.5, 0.0);
-    target second_point(1.0, 0.0, 0.5, 0.0);
+    target first_point(0.0, 0.0, 1.0, 0.0);
+    target second_point(1.0, 0.0, 1.0, 0.0);
     velocity vel1(0.1, 0.0, 0.0, 0.0);
     while (rclcpp::ok()) {
         switch (flag) {
@@ -147,7 +147,7 @@ void quadcopter::main_loop() {
                 }
                 break;
             case 2:
-                flight_ctrl->fly_by_velocity(std::make_unique<velocity>(0.05, vision_msg->lateral_error/500, 0, vision_msg->angle_error/10).get());
+                flight_ctrl->fly_by_velocity(std::make_unique<velocity>(0.03, vision_msg->lateral_error/-1000.0, 0, vision_msg->angle_error/5).get());
                 break;
         }
         rate->sleep();

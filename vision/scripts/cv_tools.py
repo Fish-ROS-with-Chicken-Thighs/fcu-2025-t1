@@ -133,45 +133,43 @@ class CVTools:
         frame_copy = frame.copy()
         frame = cv2.medianBlur(frame, 3) #  椒盐滤波
         edges = cv2.Canny(frame, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=50)
-
-        if lines is not None:
-            best_line = None
-            best_length = 0
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                line_length = np.sqrt((x2 - x1)**2 + (y2 - y1)**2) # 计算直线长度，筛选最长
-                if line_length > best_length:
-                    best_length = line_length
-                    best_line = line
-
-            if best_line is not None:
-                x1, y1, x2, y2 = best_line[0]
-                cv2.line(frame_copy , (x1, y1), (x2, y2), (0, 0, 255), 2)
-
-                # lateral_error > 0：线路在无人机右侧，需要向右移动
-                # lateral_error < 0：线路在无人机左侧，需要向左移动
-                lateral_error = (y1 + y2)//2 - frame.shape[1]//2 # 线中心-图形中心
-
-                # angle_error > 0：线路右偏，需要顺时针增加yaw
-                # angle_error < 0：线路左偏，需要逆时针减少yaw
-                line_angle = np.arctan2(y2 - y1, x2 - x1)
-                line_angle_body = line_angle - np.pi / 2 # 转换为机体坐标系
-                line_angle_body = line_angle_body % (2 * np.pi) # 归一化[0, 2π]和yaw同步
-                desired_angle = 0  # 期望角度为0（垂直方向）
-                angle_error = line_angle - desired_angle
-                angle_error = angle_error % (2 * np.pi)  # 归一化到 [0, 2π]
-                if angle_error > np.pi: # 消除大于π的下半圆歧义，转换为负值表示左偏
-                    angle_error -= 2 * np.pi
-
-                # 填充ros消息
-                self.node.msg.is_line_detected = True
-                self.node.msg.lateral_error = int(lateral_error)
-                self.node.msg.angle_error = angle_error
-                return frame_copy
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=100, maxLineGap=50)
         
-        self.node.msg.is_line_detected = False
-        self.node.msg.lateral_error = 0
-        self.node.msg.angle_error = 0.0
-        return frame_copy
+        if lines is None:
+            self.node.msg.is_line_detected = False
+            self.node.msg.lateral_error = 0
+            self.node.msg.angle_error = 0.0
+            return frame_copy
 
+        # 找到最长的直线
+        best_line = max(lines, key=lambda line: np.sqrt((line[0][2] - line[0][0])**2 + (line[0][3] - line[0][1])**2))
+        x1, y1, x2, y2 = best_line[0]
+        cv2.line(frame_copy, (x1, y1), (x2, y2), (0, 0, 255), 3)
+
+        # lateral_error > 0：线路在无人机右侧，需要向右移动
+        # lateral_error < 0：线路在无人机左侧，需要向左移动
+        lateral_error = (x1 + x2)//2 - frame.shape[1]//2 # 线中心-图形中心
+
+        # angle_error > 0：线路右偏，需要顺时针增加yaw
+        # angle_error < 0：线路左偏，需要逆时针减少yaw
+        line_angle = np.arctan2(y2 - y1, x2 - x1)
+        line_angle_body = line_angle - np.pi / 2 # 转换为机体坐标系
+        line_angle_body = line_angle_body % (2 * np.pi) # 归一化[0, 2π]和yaw同步
+        desired_angle = 0  # 期望角度为0（垂直方向）
+        angle_error = line_angle - desired_angle
+        if angle_error > np.pi: # 消除大于π的下半圆歧义，转换为负值表示左偏
+            angle_error -= 2 * np.pi
+
+        # 控制器优化
+        angle_error = angle_error / (np.pi / 2) # 归一化到 [0, 1]
+        if abs(angle_error) < 0.1:
+            gain = 1.5  # 较大增益
+        else:  # 角度误差较大
+            gain = 0.5  # 较小增益
+        angle_error = np.tanh(angle_error) * gain # 转换为线性映射，并增益
+
+        # 填充ros消息
+        self.node.msg.is_line_detected = True
+        self.node.msg.lateral_error = int(lateral_error)
+        self.node.msg.angle_error = angle_error
+        return frame_copy
