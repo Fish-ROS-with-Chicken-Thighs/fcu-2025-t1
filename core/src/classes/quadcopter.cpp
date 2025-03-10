@@ -126,8 +126,7 @@ void quadcopter::main_loop() {
     --------------------------示例----------------------------*/
 
     int flag = 0;
-    target first_point(0.0, 0.0, 1.0, 0.0);
-    target second_point(1.0, 0.0, 1.0, 0.0);
+    target first_point(0.0, 0.0, 1.5, 0.0);
     velocity vel1(0.1, 0.0, 0.0, 0.0);
     while (rclcpp::ok()) {
         switch (flag) {
@@ -138,7 +137,6 @@ void quadcopter::main_loop() {
                 RCLCPP_INFO(this->get_logger(), "前进");
                 break;
             case 1:
-                flight_ctrl->fly_to_target(&second_point);
                 flight_ctrl->fly_by_velocity(&vel1);
                 if (vision_msg->is_line_detected) {
                     RCLCPP_INFO(this->get_logger(), "发现直线");
@@ -148,6 +146,14 @@ void quadcopter::main_loop() {
                 break;
             case 2:
                 flight_ctrl->fly_by_velocity(std::make_unique<velocity>(0.03, vision_msg->lateral_error/-1000.0, 0, vision_msg->angle_error/5).get());
+                if (vision_msg->is_shape_detected) {
+                    RCLCPP_INFO(this->get_logger(), "发现形状");
+                    flag = 3;
+                    RCLCPP_INFO(this->get_logger(), "降落");
+                }
+                break;
+            case 3:
+                flight_ctrl->fly_by_velocity(std::make_unique<velocity>(0.0, 0.0, 0.0, 0.0).get());
                 break;
         }
         rate->sleep();

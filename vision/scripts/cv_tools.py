@@ -130,9 +130,8 @@ class CVTools:
     
     # 霍夫直线，TODO：卡尔曼滤波
     def line_detect(self, frame):
-        frame_copy = frame.copy()
-        frame = cv2.medianBlur(frame, 3) #  椒盐滤波
-        edges = cv2.Canny(frame, 50, 150, apertureSize=3)
+        frame_copy = cv2.cvtColor(frame.copy(), cv2.COLOR_GRAY2BGR)
+        edges = cv2.Canny(frame, 50, 200, apertureSize=3)
         lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=100, maxLineGap=50)
         
         if lines is None:
@@ -149,6 +148,13 @@ class CVTools:
         # lateral_error > 0：线路在无人机右侧，需要向右移动
         # lateral_error < 0：线路在无人机左侧，需要向左移动
         lateral_error = (x1 + x2)//2 - frame.shape[1]//2 # 线中心-图形中心
+        
+        # 控制器优化
+        if abs(lateral_error) < 50:
+            gain = 0
+        else:  # 横向误差较大
+            gain = 1
+        lateral_error = lateral_error * gain
 
         # angle_error > 0：线路右偏，需要顺时针增加yaw
         # angle_error < 0：线路左偏，需要逆时针减少yaw
@@ -163,9 +169,9 @@ class CVTools:
         # 控制器优化
         angle_error = angle_error / (np.pi / 2) # 归一化到 [0, 1]
         if abs(angle_error) < 0.1:
-            gain = 1.5  # 较大增益
+            gain = 0  # 0增益
         else:  # 角度误差较大
-            gain = 0.5  # 较小增益
+            gain = 0.3
         angle_error = np.tanh(angle_error) * gain # 转换为线性映射，并增益
 
         # 填充ros消息
