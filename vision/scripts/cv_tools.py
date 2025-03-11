@@ -31,13 +31,12 @@ class CVTools:
 
     # 标记坐标
     @staticmethod
-    def mark(contour, frame_copy):
+    def mark(frame_copy, contour):
         x, y, w, h = cv2.boundingRect(contour)
-        cv2.rectangle(frame_copy, (x - 5, y - 5), (x + w + 5, y + h + 5), (0, 255, 0), 2) # 画外接矩形
-        # 找到图形轮廓中心坐标
+        cv2.rectangle(frame_copy, (x - 5, y - 5), (x + w + 5, y + h + 5), (0, 255, 0), 2) # 框选
         M = cv2.moments(contour)
         center_x = int(M['m10'] / M['m00'])
-        center_y = int(M['m01'] / M['m00'])
+        center_y = int(M['m01'] / M['m00']) # 轮廓中心
         cv2.circle(frame_copy, (center_x, center_y), 1, (255, 0, 255), 1)
         cv2.putText(frame_copy, "[" + str(center_x) + "," + str(center_y) + "]", (center_x, center_y - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
@@ -60,14 +59,18 @@ class CVTools:
 
     # 过滤轮廓，并执行检测
     def detect_contours(self, contours, frame):
-        if contours is not None:
-            for contour in contours:
-                area = cv2.contourArea(contour) # 轮廓面积
-                x, y, w, h = cv2.boundingRect(contour) # 外接矩形
-                if area > 10000 and area < 30000 and w / h > 0.8 and w / h < 1.25:
-                    frame_ROI = frame[y-5:y + h+5,x-5:x + w+5]
-                    if frame_ROI is not None and frame_ROI.shape[0] > 0 and frame_ROI.shape[1] > 0:
-                        self.hsv_detect(frame, frame_ROI, contour, area)
+        frame_copy = frame.copy()
+        if contours is None:
+            return frame_copy
+        
+        for contour in contours:
+            area = cv2.contourArea(contour) # 轮廓面积
+            x, y, w, h = cv2.boundingRect(contour) # 外接矩形
+            if area > 10000 and area < 30000 and w / h > 0.8 and w / h < 1.25:
+                frame_ROI = frame[y-5:y + h+5,x-5:x + w+5]
+                if frame_ROI.size > 0:
+                    frame_copy = self.hsv_detect(frame, frame_ROI, contour, area)
+        return frame_copy
 
     # hsv空间的霍夫检测
     def hsv_detect(self, frame, ROI_img, ROI_contour, ROI_contour_area):
@@ -116,14 +119,14 @@ class CVTools:
                     if approx is not None:
                         M = cv2.moments(contour)
                         center_x = int(M['m10'] / M['m00'])
-                        center_y = int(M['m01'] / M['m00']) # 当前轮廓中心
+                        center_y = int(M['m01'] / M['m00']) # 轮廓中心
 
                         if len(approx) == 3:  # 三边
-                            self.mark(ROI_contour, frame_copy)
+                            self.mark(frame_copy, ROI_contour)
                             cv2.drawContours(frame_copy, [approx], 0, (0, 0, 255), 2)
                             cv2.putText(frame_copy, f"{color_name}_triangle", (center_x - 40, center_y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
                         elif len(approx) == 4:  # 四边
-                            self.mark(ROI_contour, frame_copy)
+                            self.mark(frame_copy, ROI_contour)
                             cv2.drawContours(frame_copy, [approx], 0, (0, 0, 255), 2)
                             cv2.putText(frame_copy, f"{color_name}_square", (center_x - 40, center_y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
         return frame_copy
