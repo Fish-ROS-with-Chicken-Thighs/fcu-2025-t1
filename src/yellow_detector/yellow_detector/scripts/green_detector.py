@@ -7,9 +7,9 @@ import cv2
 import numpy as np
 from geometry_msgs.msg import Point
 
-class YellowDetector(Node):
+class GreenDetector(Node):
     def __init__(self):
-        super().__init__('yellow_detector')
+        super().__init__('green_detector')
         
         # 初始化CV桥接器
         self.bridge = CvBridge()
@@ -23,12 +23,21 @@ class YellowDetector(Node):
         
         # 处理结果发布者
         self.proc_pub = self.create_publisher(Image, '/processed_image', 10)
-        self.center_pub = self.create_publisher(Point, '/yellow_center_offset', 10)
+        self.center_pub = self.create_publisher(Point, '/green_center_offset', 10)
         
         # 定义黄色HSV阈值范围
-        self.lower_yellow = np.array([20, 100, 100])
-        self.upper_yellow = np.array([30, 255, 255])
-        
+        # self.lower_yellow = np.array([20, 100, 100])
+        # self.upper_yellow = np.array([30, 255, 255])
+
+        # 定义红色HSV阈值范围
+        # self.lower_red1 = np.array([0, 100, 100])    # 低区间 (H: 0-10)
+        # self.upper_red1 = np.array([10, 255, 255])
+        # self.lower_red2 = np.array([160, 100, 100])  # 高区间 (H: 160-180)
+        # self.upper_red2 = np.array([180, 255, 255])
+
+        # 绿色的HSV阈值范围
+        self.lower_green = np.array([35, 100, 100])   # H:35~85, S≥100, V≥100
+        self.upper_green = np.array([85, 255, 255])
         # 形态学操作核
         self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
 
@@ -39,12 +48,17 @@ class YellowDetector(Node):
         except Exception as e:
             self.get_logger().error(f'图像转换失败: {str(e)}')
             return
-
+        
         # 转换为HSV颜色空间
         hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
-        
+        # 创建绿色掩模
+        mask = cv2.inRange(hsv, self.lower_green, self.upper_green)
+        # 创建红色掩模
+        # mask_red1 = cv2.inRange(hsv, self.lower_red1, self.upper_red1)
+        # mask_red2 = cv2.inRange(hsv, self.lower_red2, self.upper_red2)
+        # mask = cv2.bitwise_or(mask_red1, mask_red2)
         # 创建黄色掩模
-        mask = cv2.inRange(hsv, self.lower_yellow, self.upper_yellow)
+        # mask = cv2.inRange(hsv, self.lower_yellow, self.upper_yellow)
         
         # 形态学处理：先腐蚀再膨胀（开运算）
         processed = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernel)
@@ -108,7 +122,7 @@ class YellowDetector(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    detector = YellowDetector()
+    detector = GreenDetector()
     rclpy.spin(detector)
     detector.destroy_node()
     rclpy.shutdown()

@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'yellow_detector = yellow_detector.scripts.yellow_detector:main',
+            'green_detector = yellow_detector.scripts.green_detector:main',
+            'red_detector = yellow_detector.scripts.red_detector:main',
         ],
     },
 )

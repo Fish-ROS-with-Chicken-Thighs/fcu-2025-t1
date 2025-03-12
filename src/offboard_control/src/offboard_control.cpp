@@ -46,6 +46,10 @@ private:
     ARMING,               // 解锁无人机
     POST_ARMING_DELAY,    // 解锁后等待
     ACTIVE,               // 主动控制阶段
+    ACTIVE2,              // 主动控制阶段2
+    ACTIVE3,              // 主动控制阶段3
+    ACTIVE4,              // 主动控制阶段4
+    ACTIVE5,              // 主动控制阶段5
     ERROR_STATE           // 错误处理状态
   };
 
@@ -61,17 +65,21 @@ private:
   rclcpp::Time state_entry_time_;
   int retry_count_;
   int pose_count_;
-  bool vision_memory_ = false;
   bool pose_memory1_ = false;
+  bool pose_memory2_ = false;
   double pose_memory1_x_ = 0.0;
   double pose_memory1_y_ = 0.0;
   double pose_memory1_z_ = 0.0;
+  double pose_memory2_x_ = 0.0;
+  double pose_memory2_y_ = 0.0;
+  double pose_memory2_z_ = 0.0;
   // ROS 通信组件
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr local_pos_pub_;
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr cmd_vel_pub_;
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr vision_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr vision2_sub_;
   rclcpp::Client<mavros_msgs::srv::CommandBool>::SharedPtr arming_client_;
   rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr set_mode_client_;
   rclcpp::TimerBase::SharedPtr timer_;
@@ -81,6 +89,7 @@ private:
   nav_msgs::msg::Odometry current_odom_;
   geometry_msgs::msg::PoseStamped pose_;
   geometry_msgs::msg::Point vision_;
+  geometry_msgs::msg::Point vision2_;
 
   // ========================
   // 核心逻辑方法
@@ -90,7 +99,7 @@ private:
     target_height_ = get_parameter("target_height").as_double();
     
     pose_.pose.position.x = 0.0;
-    pose_.pose.position.y = target_y_;
+    pose_.pose.position.y = 0.0;
     pose_.pose.position.z = target_height_;
   }
 
@@ -118,16 +127,18 @@ private:
       "/mavros/global_position/local", mavros_qos,
       [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
         current_odom_ = *msg;
-        // RCLCPP_DEBUG(get_logger(), "Odom update: x=%.2f", 
-        //             msg->pose.pose.position.x);
       });
   
     vision_sub_ = create_subscription<geometry_msgs::msg::Point>(
-      "/yellow_center_offset", 10,
+      "/green_center_offset", 10,
       [this](const geometry_msgs::msg::Point::SharedPtr msg) {
         vision_ = *msg;
-        // RCLCPP_INFO(get_logger(), "Vision update: x=%.2f, y=%.2f, z=%.2f", 
-        //            msg->x, msg->y, msg->z);
+      });
+
+    vision2_sub_ = create_subscription<geometry_msgs::msg::Point>(
+      "/red_center_offset", 10,
+      [this](const geometry_msgs::msg::Point::SharedPtr msg) {
+        vision2_ = *msg;
       });
   }
 
@@ -155,6 +166,10 @@ private:
       case ControlState::ARMING:           handle_arming(); break;
       case ControlState::POST_ARMING_DELAY: handle_post_arming_delay(); break;
       case ControlState::ACTIVE:           handle_active_state(); break;
+      case ControlState::ACTIVE2:          handle_active_state2(); break;
+      case ControlState::ACTIVE3:          handle_active_state3(); break;
+      case ControlState::ACTIVE4:          handle_active_state4(); break;
+      case ControlState::ACTIVE5:          handle_active_state5(); break;
       case ControlState::ERROR_STATE:      handle_error_state(); break;
     }
   }
@@ -180,6 +195,10 @@ private:
       case ControlState::ARMING:             return "ARMING";
       case ControlState::POST_ARMING_DELAY:  return "POST_ARMING_DELAY";
       case ControlState::ACTIVE:             return "ACTIVE";
+      case ControlState::ACTIVE2:            return "ACTIVE2";
+      case ControlState::ACTIVE3:            return "ACTIVE3";
+      case ControlState::ACTIVE4:            return "ACTIVE4";
+      case ControlState::ACTIVE5:            return "ACTIVE5";
       case ControlState::ERROR_STATE:        return "ERROR_STATE";
       default:                               return "UNKNOWN";
     }
@@ -244,8 +263,103 @@ private:
       if (timeout(500ms)) pose_count_++;
       RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control");
     } else {
+        if (pose_memory2_ == true ) enter_state(ControlState::ACTIVE2);
         publish_velocity();
     }
+  }
+
+  void handle_active_state2() {
+    pose_.pose.position.x = pose_memory2_x_;
+    pose_.pose.position.y = pose_memory2_y_;
+    pose_.pose.position.z = 1.5;
+    // 关键：更新时间戳
+    pose_.header.stamp = this->now();
+    local_pos_pub_->publish(pose_);
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control2");
+    if (timeout(5s)) enter_state(ControlState::ACTIVE3);
+  }
+
+  void handle_active_state3() {
+    pose_.pose.position.x = pose_memory2_x_;
+    pose_.pose.position.y = 0.0;
+    pose_.pose.position.z = 1.5;
+    // 关键：更新时间戳
+    pose_.header.stamp = this->now();
+    local_pos_pub_->publish(pose_);
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control3");
+    if (timeout(3s)) 
+    {
+      pose_memory1_ = false;
+      enter_state(ControlState::ACTIVE4);
+    }
+  }
+
+  void handle_active_state4() {
+    auto now = this->now();
+    double current_y = current_odom_.pose.pose.position.y;
+    double current_z = current_odom_.pose.pose.position.z;
+    double current_w = current_odom_.pose.pose.orientation.z;
+    double error_y = 0.0 - current_y;
+    double error_z = 1.5 - current_z;
+    double error_w = current_w;
+    double target_x_ = vision2_.y;
+    double target_y_ = vision2_.x;
+    geometry_msgs::msg::TwistStamped twist;
+    twist.header.stamp = this->now();
+    twist.header.frame_id = "base_link";
+    int vision_button = vision2_.z;
+    if( vision_button > 0 && vision_button < 10000) 
+    {
+      twist.twist.linear.x = -target_x_/800;  
+      twist.twist.linear.y = -target_y_/800;
+      twist.twist.linear.z = 0.8 * error_z;  // Z轴高度修正
+      twist.twist.angular.z = 0.5 * error_w; // Yaw角速度修正
+      if (fabs(target_x_) < 3 && fabs(target_y_) < 3)
+      {
+        pose_memory1_ = true;
+        RCLCPP_INFO(get_logger(),"Vision memory3");
+      } 
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control4:Vision");
+    }
+    else 
+    {
+      twist.twist.linear.x = 0.2;
+      twist.twist.linear.y = 0.8 * error_y;  // Y轴速度修正
+      twist.twist.linear.z = 0.8 * error_z;  // Z轴高度修正
+      twist.twist.angular.z = 0.5 * error_w; // Yaw角速度修正
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control4:Vel");
+    }
+    cmd_vel_pub_->publish(twist);
+    if (timeout(5s) && pose_memory1_ == true) enter_state(ControlState::ACTIVE5);
+  }
+
+  void handle_active_state5() {
+    // 仅在进入状态时触发一次模式切换
+    if (retry_count_ == 0) {
+        RCLCPP_INFO(get_logger(), "Attempting to switch to LAND mode");
+        auto request = std::make_shared<mavros_msgs::srv::SetMode::Request>();
+        request->custom_mode = "LAND";
+        set_mode_client_->async_send_request(
+            request,
+            [this](rclcpp::Client<mavros_msgs::srv::SetMode>::SharedFuture future) {
+                try {
+                    auto response = future.get();
+                    if (response->mode_sent) {
+                        RCLCPP_INFO(get_logger(), "LAND mode enabled. Shutting down.");
+                        rclcpp::shutdown(); // 安全关闭节点
+                    } else {
+                        RCLCPP_ERROR(get_logger(), "Failed to set LAND mode");
+                        handle_service_failure("SetMode(LAND)");
+                    }
+                } catch (const std::exception& e) {
+                    RCLCPP_ERROR(get_logger(), "Service call failed: %s", e.what());
+                    handle_service_failure("SetMode(LAND)");
+                }
+            }
+        );
+        retry_count_ = 1; // 标记已发起请求
+    }
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control5: Landing...");
   }
 
   void handle_error_state() {
@@ -325,38 +439,46 @@ private:
     double current_y = current_odom_.pose.pose.position.y;
     double current_z = current_odom_.pose.pose.position.z;
     double current_w = current_odom_.pose.pose.orientation.z;
-    double target_x = vision_.y;
+    double target_x_ = vision_.y;
     double target_y_ = vision_.x;
     int vision_button = vision_.z;
-    double error_y = 0 - current_y;
+    double error_y = 0.0 - current_y;
     double error_z = target_height_ - current_z;
     double error_w = current_w;
     geometry_msgs::msg::TwistStamped twist;
     twist.header.stamp = this->now();
     twist.header.frame_id = "base_link";
-    if( vision_button > 0 && vision_button < 10000 && vision_memory_ == false) 
+    if( vision_button > 0 && vision_button < 10000 && pose_memory1_ == false) 
     {
-      twist.twist.linear.x = -target_x/2000;
-      if (fabs(target_x) < 6)
+      twist.twist.linear.x = -target_x_/800;
+      if (fabs(target_x_) < 3)
       {
         pose_memory1_x_ = current_x;
-        pose_memory1_y_ = current_y;
-        pose_memory1_z_ = current_z;
-        vision_memory_ = true;
+        pose_memory1_y_ = 0.0;
+        pose_memory1_z_ = 1.5;
+        pose_memory1_ = true;
         RCLCPP_INFO(get_logger(),"Vision memory1");
       } 
       twist.twist.linear.y = 0.8 * error_y;  // Y轴速度修正
       twist.twist.linear.z = 0.8 * error_z;  // Z轴高度修正
       twist.twist.angular.z = 0.5 * error_w; // Yaw角速度修正
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, "Vision 1");
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Vision 1");
     }
-    else if ( vision_button > 0 && vision_button < 10000 && vision_memory_ == true)
+    else if ( vision_button > 0 && vision_button < 10000 && pose_memory1_ == true)
     {
-      twist.twist.linear.x = -target_x/2000;
-      twist.twist.linear.y = -target_y_/2000;
+      twist.twist.linear.x = -target_x_/800;
+      twist.twist.linear.y = -target_y_/800;
       twist.twist.linear.z = 0.8 * error_z;  // Z轴高度修正
       twist.twist.angular.z = 0.5 * error_w; // Yaw角速度修正
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, "Vision 2");
+      if (fabs(target_y_) < 3)
+      {
+        pose_memory2_x_ = pose_memory1_x_;
+        pose_memory2_y_ = current_y;
+        pose_memory2_z_ = 1.5;
+        pose_memory2_ = true;
+        RCLCPP_INFO(get_logger(),"Vision memory2");
+      } 
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Vision 2");
     }
     else 
     {
@@ -367,9 +489,6 @@ private:
       RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 500, "Vel");
     }
     cmd_vel_pub_->publish(twist);
-    // RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000,
-    // "Velocity control | X: %.2f | Y: %.2f->%.2f (err: %.2f) | Z: %.2f->%.2f (err: %.2f) | W: %.2f->%.2f (err: %.2f)",
-    // twist.twist.linear.x,current_y, target_y_, error_y, current_z, target_height_, error_z, current_w, 0.0, error_w);
   }
 };
 
