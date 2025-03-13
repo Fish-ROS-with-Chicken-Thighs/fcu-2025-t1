@@ -95,14 +95,7 @@ void quadcopter::main_loop() {
     path path1; // 第一段路径
     path1.add_waypoint(target(1.0, 0, 0.5, 0)); // 被移除
     path1.add_waypoint(target(0, 1.0, 0.5, 0));
-    path1.add_waypoint(target(-1.0, 0, 0.5, 0));
-    path1.add_waypoint(target(0, -1.0, 0.5, 0));
-    path1.add_waypoint(target(0, 1.0, 1.5, 0));
-    path1.add_waypoint(target(-1.0, 0, 1.5, 0));
-    path1.add_waypoint(target(0, -1.0, 1.5, 0));
-    path1.add_waypoint(target(0, 1.0, 2.5, 0));
     path1.add_waypoint(target(-1.0, 0, 2.5, 0));
-    path1.add_waypoint(target(0, -1.0, 2.5, 0));
     path1.remove_waypoint(0); // 移除第一个点
 
     int state = 0;
@@ -126,8 +119,10 @@ void quadcopter::main_loop() {
     --------------------------示例----------------------------*/
 
     int flag = 0;
+    float default_altitude = 1.5;
     target first_point(0.0, 0.0, 1.5, 0.0);
     velocity vel1(0.1, 0.0, 0.0, 0.0);
+    velocity vel2(0.05, 0.0, 0.0, 0.0);
     while (rclcpp::ok()) {
         switch (flag) {
             case 0:
@@ -145,7 +140,11 @@ void quadcopter::main_loop() {
                 }
                 break;
             case 2:
-                flight_ctrl->fly_by_velocity(std::make_unique<velocity>(0.03, vision_msg->lateral_error/-1000.0, 0, vision_msg->angle_error/5).get());
+                vel2.set_vy(vision_msg->lateral_error/-1000.0);
+                vel2.set_vyaw(vision_msg->angle_error/5);
+                if (default_altitude - z > 0.05) { vel2.set_vz(0.03); } 
+                else if (default_altitude - z < -0.05) { vel2.set_vz(-0.03); }
+                flight_ctrl->fly_by_velocity(&vel2);
                 if (vision_msg->is_shape_detected) {
                     RCLCPP_INFO(this->get_logger(), "发现形状");
                     flag = 3;

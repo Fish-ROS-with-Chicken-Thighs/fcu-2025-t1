@@ -30,7 +30,8 @@ class CVTools:
         out.write(frame) # 写入视频
 
     # 标记坐标
-    def mark(self, contour, frame_copy, originX, originY):
+    @staticmethod
+    def mark(contour, frame_copy, originX, originY):
         x, y, w, h = cv2.boundingRect(contour)
         # 画外接矩形
         cv2.rectangle(frame_copy, (originX+x-5, originY+y-5), (originX+x+w+5, originY+y+h+5), (0, 255, 0), 2)
@@ -54,6 +55,42 @@ class CVTools:
         result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
         return result
 
+    # 质心法轮廓去重
+    @staticmethod
+    def filter_contours_by_centroid(contours, min_dist=20):
+        contour_centers = []
+        filtered_contours = []
+
+        for cnt in contours:
+            M = cv2.moments(cnt)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                
+                # 检查是否与已有质心距离过近
+                if all(np.hypot(cx - x, cy - y) > min_dist for x, y in contour_centers):
+                    contour_centers.append((cx, cy))
+                    filtered_contours.append(cnt)  # 仅保留间距足够的轮廓
+
+        return filtered_contours
+
+    # 质心法霍夫圆去重
+    @staticmethod
+    def filter_best_circle(circles):
+        if circles is None:
+            return None
+        circles = np.uint16(np.around(circles))
+
+        # 按圆心 (x, y) 进行聚类
+        filtered = []
+        for c in circles[0, :]:
+            x, y, r = c
+            # 如果该圆和已有的圆中心相差很近，就忽略
+            if any(np.linalg.norm(np.array([x, y]) - np.array([fx, fy])) < 20 for fx, fy, _ in filtered):
+                continue
+            filtered.append((x, y, r))
+
+        return np.array(filtered).reshape(-1, 1, 3) if filtered else None
 
     #-------------------------------------------------
     #--------------------任务驱动类--------------------
@@ -67,11 +104,11 @@ class CVTools:
             if 0.8 < w / h < 1.25:
                 frame_roi = frame[y-5:y + h+5,x-5:x + w+5]
                 if frame_roi.size > 0:
-                    self.hsv_detect(frame, frame_copy, frame_roi, contour)
+                    self.hsv_detect(frame_copy, frame_roi, contour)
         return frame_copy
 
     # hsv空间的霍夫检测
-    def hsv_detect(self, frame, frame_copy, roi_img, contour):
+    def hsv_detect(self, frame_copy, roi_img, contour):
         x, y, w, h = cv2.boundingRect(contour)
 
         hsv_colors = {
@@ -91,13 +128,15 @@ class CVTools:
             _, hsv_thresh = cv2.threshold(hsv_edges, 150, 255, cv2.THRESH_TRUNC)
             hsv_contours, _ = cv2.findContours(hsv_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
             valid_contours = [cnt for cnt in hsv_contours if cv2.contourArea(cnt) > 1000]
+            possible_contours = CVTools.filter_contours_by_centroid(valid_contours, min_dist=20)
                 
-            for contour in valid_contours:
+            for contour in possible_contours:
                 # 霍夫圆检测
                 # param1用于边缘Canny算子的高阈值。大值检测更少的边缘，减少圆数量。
                 # param2用于圆心的累加器阈值。小值更多的累加器投票，检测到更多的假阳性圆。
-                circles = cv2.HoughCircles(hsv_edges, cv2.HOUGH_GRADIENT, dp=1, minDist=100,
-                                        param1=10, param2=40, minRadius=0, maxRadius=0)
+                circles = cv2.HoughCircles(hsv_edges, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
+                                        param1=10, param2=30, minRadius=20, maxRadius=0)
+                circles = CVTools.filter_best_circle(circles)
                 if circles is not None:
                     M = cv2.moments(contour)
                     center_x = int(M['m10'] / M['m00'])
@@ -105,17 +144,17 @@ class CVTools:
                     circles = np.uint16(np.around(circles))
                     for i in circles[0, :]:
                         cv2.circle(frame_copy, center=(x-5+i[0], y-5+i[1]), radius=i[2],  color=(255, 0, 255), thickness=2)
-                        cv2.putText(frame_copy, f"{color_name}_circle", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
-                        frame_copy = self.mark(contour, frame_copy, x, y)
+                        cv2.putText(frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
+                        frame_copy = CVTools.mark(contour, frame_copy, x, y)
                 
                 # 矩形拟合
-                approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True) # 逼近精度4%轮廓周长
+                approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True) # 逼近精度4%轮廓周长
                 if len(approx) == 4:
                     M = cv2.moments(contour)
                     center_x = int(M['m10'] / M['m00'])
                     center_y = int(M['m01'] / M['m00']) # 轮廓中心
-                    cv2.putText(frame_copy, f"{color_name}_square", (x+center_x-40, y+center_y-40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-                    frame_copy = self.mark(contour, frame_copy, x, y)
+                    cv2.putText(frame_copy, f"2", (x+center_x-40, y+center_y-40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
+                    frame_copy = CVTools.mark(contour, frame_copy, x, y)
     
     # 霍夫直线，TODO：卡尔曼滤波
     def line_detect(self, frame):
@@ -165,6 +204,6 @@ class CVTools:
 
         # 填充ros消息
         self.node.msg.is_line_detected = True
-        self.node.msg.lateral_error = 0#int(lateral_error)
-        self.node.msg.angle_error = 0.0#angle_error
+        self.node.msg.lateral_error = int(lateral_error)
+        self.node.msg.angle_error = angle_error
         return frame_copy
