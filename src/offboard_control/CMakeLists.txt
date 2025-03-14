@@ -11,6 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(mavros_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 # C++ 20特性
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,6 +31,7 @@ ament_target_dependencies(offboard_node
   geometry_msgs
   mavros_msgs
   nav_msgs
+  std_msgs
 )
  
 # 安装可执行文件到 lib/<包名>

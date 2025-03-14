@@ -11,6 +11,7 @@
 #include "mavros_msgs/srv/command_bool.hpp"
 #include "mavros_msgs/srv/set_mode.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "std_msgs/msg/bool.hpp"
 
 using namespace std::chrono_literals;
 
@@ -50,6 +51,7 @@ private:
     ACTIVE3,              // 主动控制阶段3
     ACTIVE4,              // 主动控制阶段4
     ACTIVE5,              // 主动控制阶段5
+    ACTIVE6,              // 主动控制阶段6
     ERROR_STATE           // 错误处理状态
   };
 
@@ -76,6 +78,7 @@ private:
   // ROS 通信组件
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr local_pos_pub_;
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr cmd_vel_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr bool_pub_;
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr vision_sub_;
@@ -90,6 +93,7 @@ private:
   geometry_msgs::msg::PoseStamped pose_;
   geometry_msgs::msg::Point vision_;
   geometry_msgs::msg::Point vision2_;
+  std_msgs::msg::Bool bool_msg_;
 
   // ========================
   // 核心逻辑方法
@@ -101,6 +105,7 @@ private:
     pose_.pose.position.x = 0.0;
     pose_.pose.position.y = 0.0;
     pose_.pose.position.z = target_height_;
+    bool_msg_.data = false;
   }
 
   void setup_publishers() {
@@ -109,6 +114,8 @@ private:
       "mavros/setpoint_position/local", qos);
     cmd_vel_pub_ = create_publisher<geometry_msgs::msg::TwistStamped>(
       "mavros/setpoint_velocity/cmd_vel", qos);
+    bool_pub_ = create_publisher<std_msgs::msg::Bool>(
+      "bool_flag", qos);
   }
 
   void setup_subscribers() {
@@ -170,6 +177,7 @@ private:
       case ControlState::ACTIVE3:          handle_active_state3(); break;
       case ControlState::ACTIVE4:          handle_active_state4(); break;
       case ControlState::ACTIVE5:          handle_active_state5(); break;
+      case ControlState::ACTIVE6:          handle_active_state6(); break;
       case ControlState::ERROR_STATE:      handle_error_state(); break;
     }
   }
@@ -263,8 +271,8 @@ private:
       if (timeout(500ms)) pose_count_++;
       RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control");
     } else {
-        if (pose_memory2_ == true ) enter_state(ControlState::ACTIVE2);
         publish_velocity();
+        if (pose_memory2_ == true ) enter_state(ControlState::ACTIVE2);
     }
   }
 
@@ -276,11 +284,13 @@ private:
     pose_.header.stamp = this->now();
     local_pos_pub_->publish(pose_);
     RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control2");
-    if (timeout(5s)) enter_state(ControlState::ACTIVE3);
+    bool_msg_.data = true;
+    bool_pub_->publish(bool_msg_);
+    if (timeout(6s)) enter_state(ControlState::ACTIVE3);
   }
 
   void handle_active_state3() {
-    pose_.pose.position.x = pose_memory2_x_;
+    pose_.pose.position.x = pose_memory1_x_;
     pose_.pose.position.y = 0.0;
     pose_.pose.position.z = 1.5;
     // 关键：更新时间戳
@@ -290,6 +300,7 @@ private:
     if (timeout(3s)) 
     {
       pose_memory1_ = false;
+      pose_memory2_ = false;
       enter_state(ControlState::ACTIVE4);
     }
   }
@@ -314,7 +325,7 @@ private:
       twist.twist.linear.y = -target_y_/800;
       twist.twist.linear.z = 0.8 * error_z;  // Z轴高度修正
       twist.twist.angular.z = 0.5 * error_w; // Yaw角速度修正
-      if (fabs(target_x_) < 3 && fabs(target_y_) < 3)
+      if (fabs(target_x_) < 7 && fabs(target_y_) < 7)
       {
         pose_memory1_ = true;
         RCLCPP_INFO(get_logger(),"Vision memory3");
@@ -330,10 +341,35 @@ private:
       RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control4:Vel");
     }
     cmd_vel_pub_->publish(twist);
-    if (timeout(5s) && pose_memory1_ == true) enter_state(ControlState::ACTIVE5);
+    if (timeout(4s) && pose_memory1_ == true) enter_state(ControlState::ACTIVE5);
+  }
+  
+  void handle_active_state5() {
+    auto now = this->now();
+    double current_z = current_odom_.pose.pose.position.z;
+    double current_w = current_odom_.pose.pose.orientation.z;
+    double error_z = 0.8 - current_z;
+    double error_w = current_w;
+    double target_x_ = vision2_.y;
+    double target_y_ = vision2_.x;
+    geometry_msgs::msg::TwistStamped twist;
+    twist.header.stamp = this->now();
+    twist.header.frame_id = "base_link";
+    twist.twist.linear.x = -target_x_/750;  
+    twist.twist.linear.y = -target_y_/750;
+    twist.twist.linear.z = 0.5 * error_z;  // Z轴高度修正
+    twist.twist.angular.z = 0.5 * error_w; // Yaw角速度修正
+    if (fabs(target_x_) < 3 && fabs(target_y_) < 3)
+    {
+      pose_memory2_ = true;
+      RCLCPP_INFO(get_logger(),"Vision memory4");
+    } 
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control5:Vision");
+    cmd_vel_pub_->publish(twist);
+    if (timeout(6s) && pose_memory2_ == true) enter_state(ControlState::ACTIVE6);
   }
 
-  void handle_active_state5() {
+  void handle_active_state6() {
     // 仅在进入状态时触发一次模式切换
     if (retry_count_ == 0) {
         RCLCPP_INFO(get_logger(), "Attempting to switch to LAND mode");
@@ -359,7 +395,7 @@ private:
         );
         retry_count_ = 1; // 标记已发起请求
     }
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control5: Landing...");
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Active control6: Landing...");
   }
 
   void handle_error_state() {
@@ -472,7 +508,7 @@ private:
       twist.twist.angular.z = 0.5 * error_w; // Yaw角速度修正
       if (fabs(target_y_) < 3)
       {
-        pose_memory2_x_ = pose_memory1_x_;
+        pose_memory2_x_ = current_x;
         pose_memory2_y_ = current_y;
         pose_memory2_z_ = 1.5;
         pose_memory2_ = true;
