@@ -17,7 +17,6 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(mavros_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(cv_bridge REQUIRED)
 
@@ -40,7 +39,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typ
 target_link_libraries(lidar_data_node ${cpp_typesupport_target})
 
 ament_target_dependencies(lidar_data_node rclcpp geometry_msgs tf2 tf2_geometry_msgs nav_msgs)
-ament_target_dependencies(lidar_to_px4_bridge rclcpp geometry_msgs tf2 nav_msgs mavros_msgs)
+ament_target_dependencies(lidar_to_px4_bridge rclcpp geometry_msgs nav_msgs)
 ament_target_dependencies(ground_camera_node rclcpp sensor_msgs OpenCV cv_bridge)
 # ament_target_dependencies(d435_node rclcpp sensor_msgs OpenCV cv_bridge realsense2)
 

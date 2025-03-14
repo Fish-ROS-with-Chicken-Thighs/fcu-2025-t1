@@ -1,8 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <mavros_msgs/msg/position_target.hpp>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Matrix3x3.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 class LidarToPx4Bridge : public rclcpp::Node {
 public:
@@ -11,52 +9,30 @@ public:
     odom_sub = this->create_subscription<nav_msgs::msg::Odometry>("/Odometry", 10, std::bind(&LidarToPx4Bridge::odomCallback, this, std::placeholders::_1));
 
     // 发布给 PX4 飞控
-    position_target_pub = this->create_publisher<mavros_msgs::msg::PositionTarget>("/mavros/setpoint_raw/local", 10);
+    vision_pose_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/mavros/vision_pose/pose", 10);
   }
 
 private:
   void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
   {
-    // 将 Odometry 消息转换为 PositionTarget 消息
-    auto position_target = mavros_msgs::msg::PositionTarget();
-
+    auto vision_pose = geometry_msgs::msg::PoseStamped();
     // 设置时间戳
-    position_target.header.stamp = this->now();
-    position_target.header.frame_id = "map";
+    vision_pose.header.stamp = this->now();
+    vision_pose.header.frame_id = "map";
 
     // 位置
-    position_target.position.x = msg->pose.pose.position.x;
-    position_target.position.y = msg->pose.pose.position.y;
-    position_target.position.z = msg->pose.pose.position.z;
+    vision_pose.pose.position.x = msg->pose.pose.position.x;
+    vision_pose.pose.position.y = msg->pose.pose.position.y;
+    vision_pose.pose.position.z = msg->pose.pose.position.z;
 
-    // 速度
-    position_target.velocity.x = msg->twist.twist.linear.x;
-    position_target.velocity.y = msg->twist.twist.linear.y;
-    position_target.velocity.z = msg->twist.twist.linear.z;
+    // 姿态（四元数）
+    vision_pose.pose.orientation = msg->pose.pose.orientation;
 
-    // 加速度（可选）
-    position_target.acceleration_or_force.x = 0.0;
-    position_target.acceleration_or_force.y = 0.0;
-    position_target.acceleration_or_force.z = 0.0;
-
-    // 角度（可选）
-    tf2::Quaternion q(
-      msg->pose.pose.orientation.x,
-      msg->pose.pose.orientation.y,
-      msg->pose.pose.orientation.z,
-      msg->pose.pose.orientation.w);
-    double roll, pitch, yaw;
-    tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
-    position_target.yaw = yaw;
-
-    // 设置坐标系和类型掩码
-    position_target.coordinate_frame = mavros_msgs::msg::PositionTarget::FRAME_LOCAL_NED;
-    position_target.type_mask = 0;  // 使用所有字段
-    position_target_pub->publish(position_target);
+    vision_pose_pub->publish(vision_pose);
   }
 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
-  rclcpp::Publisher<mavros_msgs::msg::PositionTarget>::SharedPtr position_target_pub;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr vision_pose_pub;
 };
 
 int main(int argc, char **argv)
