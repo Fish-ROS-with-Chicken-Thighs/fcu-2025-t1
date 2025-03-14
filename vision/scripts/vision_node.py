@@ -21,9 +21,12 @@ class vision_pub_node(Node):
         self.msg.is_line_detected = False
         self.msg.lateral_error = 0
         self.msg.angle_error = 0.0
-        self.msg.is_shape_detected = False
-        self.msg.center_x = 0.0
-        self.msg.center_y = 0.0
+        self.msg.is_square_detected = False
+        self.msg.center_x1_error = 0
+        self.msg.center_y1_error = 0
+        self.msg.is_circle_detected = False
+        self.msg.center_x2_error = 0
+        self.msg.center_y2_error = 0
         self.get_logger().info("init complete")
     
     def ground_callback(self, msg):
@@ -46,7 +49,7 @@ class vision_pub_node(Node):
 
             _, thresh_frame2 = cv2.threshold(gray_frame, 235, 255, cv2.THRESH_BINARY)
             contours, _ = cv2.findContours(thresh_frame2, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)  # 提取轮廓
-            valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 1000]
+            valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 10000]
             #cv2.drawContours(frame, valid_contours, -1, (0, 255, 0), 3)  # 绘制轮廓
             detect_copy = self.cv_tools.detect_contours(valid_contours, frame)  # 过滤轮廓，并检测
             cv2.imshow('图形检测效果', detect_copy)

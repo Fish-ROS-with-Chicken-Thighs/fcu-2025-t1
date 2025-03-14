@@ -1,6 +1,9 @@
 bool is_line_detected
 int32 lateral_error
 float32 angle_error
-bool is_shape_detected
-float32 center_x
-float32 center_y
+bool is_square_detected
+int32 center_x1_error
+int32 center_y1_error
+bool is_circle_detected
+int32 center_x2_error
+int32 center_y2_error

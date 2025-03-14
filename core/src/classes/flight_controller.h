@@ -7,7 +7,7 @@
 #include "path.hpp"
 
 #define pi 3.14
-constexpr float Default_Pos_Check_Distance=0.2; 
+constexpr float Default_Pos_Check_Distance=0.25; 
 
 class quadcopter;
 class target;

@@ -120,7 +120,9 @@ void quadcopter::main_loop() {
 
     int flag = 0;
     float default_altitude = 1.5;
+    bool is_complete_cast = false;
     target first_point(0.0, 0.0, 1.5, 0.0);
+    target tar1(0.0, 0.0, 0.0, 0.0);
     velocity vel1(0.1, 0.0, 0.0, 0.0);
     velocity vel2(0.05, 0.0, 0.0, 0.0);
     while (rclcpp::ok()) {
@@ -145,14 +147,65 @@ void quadcopter::main_loop() {
                 if (default_altitude - z > 0.05) { vel2.set_vz(0.03); } 
                 else if (default_altitude - z < -0.05) { vel2.set_vz(-0.03); }
                 flight_ctrl->fly_by_velocity(&vel2);
-                if (vision_msg->is_shape_detected) {
-                    RCLCPP_INFO(this->get_logger(), "发现形状");
+                if (vision_msg->is_square_detected && !is_complete_cast) {
+                    // 记录位置
+                    tar1.set_x(x);
+                    tar1.set_y(y);
+                    tar1.set_z(z);
+                    tar1.set_yaw(yaw);
+                    RCLCPP_INFO(this->get_logger(), "发现形状, 记录位置: x=%f, y=%f, z=%f, yaw=%f", x, y, z, yaw);
                     flag = 3;
-                    RCLCPP_INFO(this->get_logger(), "降落");
+                    RCLCPP_INFO(this->get_logger(), "进入校准");
+                }
+                if (vision_msg->is_circle_detected && is_complete_cast) {
+                    RCLCPP_INFO(this->get_logger(), "发现降落区域");
+                    flag = 5;
+                    RCLCPP_INFO(this->get_logger(), "进入校准降落");
                 }
                 break;
             case 3:
-                flight_ctrl->fly_by_velocity(std::make_unique<velocity>(0.0, 0.0, 0.0, 0.0).get());
+                vel2.set_vx(vision_msg->center_x1_error/-2000.0);
+                vel2.set_vy(vision_msg->center_y1_error/-2000.0);
+                vel2.set_vyaw(0.0);
+                if (default_altitude - z > 0.05) { vel2.set_vz(0.03); } 
+                else if (default_altitude - z < -0.05) { vel2.set_vz(-0.03); }
+                flight_ctrl->fly_by_velocity(&vel2);
+                if (std::abs(vision_msg->center_x1_error) < 20 && std::abs(vision_msg->center_y1_error) < 20) {
+                    RCLCPP_INFO(this->get_logger(), "投掷");
+                    // 投掷
+                    is_complete_cast = true;
+                    flag = 4;
+                    RCLCPP_INFO(this->get_logger(), "返回巡线");
+                }
+                break;
+            case 4:
+                flight_ctrl->fly_to_target(&tar1);
+                vel2.set_vx(0.05);
+                RCLCPP_INFO(this->get_logger(), "继续巡线");
+                flag = 2;
+                break;
+            case 5:
+                vel2.set_vx(vision_msg->center_x2_error/-2000.0);
+                vel2.set_vy(vision_msg->center_y2_error/-2000.0);
+                vel2.set_vyaw(0.0);
+                if (default_altitude - z > 0.05) { vel2.set_vz(0.03); } 
+                else if (default_altitude - z < -0.05) { vel2.set_vz(-0.03); }
+                flight_ctrl->fly_by_velocity(&vel2);
+                if (std::abs(vision_msg->center_x2_error) < 20 && std::abs(vision_msg->center_y2_error) < 20) {
+                    RCLCPP_INFO(this->get_logger(), "降落");
+                    flag = 6;
+                }
+                break;
+            case 6:
+                vel2.set_vx(vision_msg->center_x2_error/2000.0);
+                vel2.set_vy(vision_msg->center_y2_error/2000.0);
+                vel2.set_vz(-0.2);
+                flight_ctrl->fly_by_velocity(&vel2);
+                if (z < 0.1) {
+                    is_complete_cast = true;
+                    RCLCPP_INFO(this->get_logger(), "降落完成");
+                    flag = 7;
+                }
                 break;
         }
         rate->sleep();

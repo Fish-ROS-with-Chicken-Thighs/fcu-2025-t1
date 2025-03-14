@@ -81,16 +81,32 @@ class CVTools:
             return None
         circles = np.uint16(np.around(circles))
 
-        # 按圆心 (x, y) 进行聚类
-        filtered = []
-        for c in circles[0, :]:
-            x, y, r = c
-            # 如果该圆和已有的圆中心相差很近，就忽略
-            if any(np.linalg.norm(np.array([x, y]) - np.array([fx, fy])) < 20 for fx, fy, _ in filtered):
-                continue
-            filtered.append((x, y, r))
+        # 假设每个圆的得分为其半径（可以根据实际情况调整）
+        # 这里假设半径越大，得分越高
+        circles_with_scores = [(x, y, r, r) for x, y, r in circles[0, :]]
 
-        return np.array(filtered).reshape(-1, 1, 3) if filtered else None
+        # 按圆心 (x, y) 进行聚类，并选择得分最高的圆
+        filtered = []
+        for c in circles_with_scores:
+            x, y, r, score = c
+            # 如果该圆和已有的圆中心相差很近，就比较得分
+            found = False
+            for i, (fx, fy, fr, fscore) in enumerate(filtered):
+                if np.linalg.norm(np.array([x, y]) - np.array([fx, fy])) < 20:
+                    found = True
+                    # 如果当前圆的得分更高，替换已有的圆
+                    if score > fscore:
+                        filtered[i] = (x, y, r, score)
+                    break
+            if not found:
+                filtered.append((x, y, r, score))
+
+        # 只保留得分最高的圆
+        if filtered:
+            best_circle = max(filtered, key=lambda x: x[3])
+            return np.array([[best_circle[0], best_circle[1], best_circle[2]]])
+        else:
+            return None
 
     #-------------------------------------------------
     #--------------------任务驱动类--------------------
@@ -134,19 +150,22 @@ class CVTools:
                 # 霍夫圆检测
                 # param1用于边缘Canny算子的高阈值。大值检测更少的边缘，减少圆数量。
                 # param2用于圆心的累加器阈值。小值更多的累加器投票，检测到更多的假阳性圆。
-                circles = cv2.HoughCircles(hsv_edges, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
+                circle = cv2.HoughCircles(hsv_edges, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
                                         param1=10, param2=30, minRadius=20, maxRadius=0)
-                circles = CVTools.filter_best_circle(circles)
-                if circles is not None:
+                #circle = CVTools.filter_best_circle(circles)
+                if circle is not None:
                     M = cv2.moments(contour)
                     center_x = int(M['m10'] / M['m00'])
                     center_y = int(M['m01'] / M['m00'])  # 轮廓中心
-                    circles = np.uint16(np.around(circles))
-                    for i in circles[0, :]:
+                    circle = np.uint16(np.around(circle))
+                    for i in circle[0, :]:
                         cv2.circle(frame_copy, center=(x-5+i[0], y-5+i[1]), radius=i[2],  color=(255, 0, 255), thickness=2)
                         cv2.putText(frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                         frame_copy = CVTools.mark(contour, frame_copy, x, y)
-                
+                        self.node.msg.is_circle_detected = True
+                        self.node.msg.center_x2_error = int(y-5+i[1]) - frame_copy.shape[0]//2
+                        self.node.msg.center_y2_error = int(x-5+i[0]) - frame_copy.shape[1]//2
+                 
                 # 矩形拟合
                 approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True) # 逼近精度4%轮廓周长
                 if len(approx) == 4:
@@ -155,6 +174,9 @@ class CVTools:
                     center_y = int(M['m01'] / M['m00']) # 轮廓中心
                     cv2.putText(frame_copy, f"2", (x+center_x-40, y+center_y-40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                     frame_copy = CVTools.mark(contour, frame_copy, x, y)
+                    self.node.msg.is_square_detected = True
+                    self.node.msg.center_x1_error = int(y-5+center_y) - frame_copy.shape[0]//2
+                    self.node.msg.center_y1_error = int(x-5+center_x) - frame_copy.shape[1]//2
     
     # 霍夫直线，TODO：卡尔曼滤波
     def line_detect(self, frame):
@@ -178,7 +200,7 @@ class CVTools:
         lateral_error = (x1 + x2)//2 - frame.shape[1]//2 # 线中心-图形中心
         
         # 控制器优化
-        if abs(lateral_error) < 50:
+        if abs(lateral_error) < 30:
             gain = 0
         else:  # 横向误差较大
             gain = 1

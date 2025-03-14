@@ -27,8 +27,10 @@ public:
     float get_x() const { return pose_stamped.pose.position.x; }
     float get_y() const { return pose_stamped.pose.position.y; }
     float get_z() const { return pose_stamped.pose.position.z; }
-    float get_yaw() const { return std::atan2(2.0 * (pose_stamped.pose.orientation.z * pose_stamped.pose.orientation.w), 
-                                        1.0 - 2.0 * (pose_stamped.pose.orientation.z * pose_stamped.pose.orientation.z)); }
+    float get_yaw() const { float yaw = std::atan2(2.0 * (pose_stamped.pose.orientation.z * pose_stamped.pose.orientation.w), 
+                                        1.0 - 2.0 * (pose_stamped.pose.orientation.z * pose_stamped.pose.orientation.z));
+                            if (yaw < 0) yaw += 2 * M_PI;
+                            return yaw; }
     
     // 重要：获取发布所需的PoseStamped结构体
     geometry_msgs::msg::PoseStamped get_pose() { return pose_stamped; }

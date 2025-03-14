@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.8)
 project(core)
 
+set(CMAKE_CXX_STANDARD 17)           # 设置 C++ 标准为 C++17
+set(CMAKE_CXX_STANDARD_REQUIRED ON)  # 必须使用指定的标准
+set(CMAKE_CXX_EXTENSIONS OFF)        # 禁用编译器特定的扩展
+
 # 为对应编译器启用更严格的编译警告
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
