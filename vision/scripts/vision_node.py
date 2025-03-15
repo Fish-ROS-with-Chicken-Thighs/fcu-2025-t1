@@ -40,10 +40,10 @@ class vision_pub_node(Node):
 
     def process(self, frame):
         try:            
-            bl_frame = self.cv_tools.backlight_compensation(frame) # 逆光补偿
+            #bl_frame = self.cv_tools.backlight_compensation(frame) # 逆光补偿
             #cv2.imshow('逆光补偿效果', bl_frame)
             
-            gray_frame = cv2.cvtColor(cv2.medianBlur(bl_frame, 3), cv2.COLOR_BGR2GRAY) # 椒盐+灰度
+            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # 灰度
             _, thresh_frame1 = cv2.threshold(gray_frame, 50, 255, cv2.THRESH_BINARY) # 二值化处理，<50->0，>50->255
             hl_copy = self.cv_tools.line_detect(thresh_frame1) # 霍夫直线
             #cv2.imshow('霍夫直线效果', hl_copy)
@@ -56,13 +56,14 @@ class vision_pub_node(Node):
             #cv2.imshow('图形检测效果', detect_copy)
             #cv2.imshow('vision', detect_copy)
 
-            detect_copy1 = self.cv_tools.yellow_square_detect(bl_frame)  # 矩形检测
+            detect_copy1 = self.cv_tools.yellow_square_detect(frame)  # 矩形检测
             #cv2.imshow('yellow', detect_copy1)
-            detect_copy2 = self.cv_tools.red_circle_detect(bl_frame)  # 红色圆形检测
+            detect_copy2 = self.cv_tools.red_circle_detect(frame)  # 红色圆形检测
             #cv2.imshow('red', detect_copy2)
             #cv2.waitKey(1)
 
-            self.frame_pub.publish(self.bridge.cv2_to_compressed_imgmsg(detect_copy2))
+            self.frame_pub.publish(self.bridge.cv2_to_compressed_imgmsg(detect_copy1))
+            self.frame_pub.publish(self.bridge.cv2_to_compressed_imgmsg(hl_copy))
             self.vision_pub.publish(self.msg)
 
         except Exception as e:

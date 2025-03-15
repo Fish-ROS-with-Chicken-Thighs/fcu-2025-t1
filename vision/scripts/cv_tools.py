@@ -205,7 +205,7 @@ class CVTools:
         
     # 霍夫直线，TODO：卡尔曼滤波
     def line_detect(self, frame):
-        frame_copy = cv2.cvtColor(frame.copy(), cv2.COLOR_GRAY2BGR)
+        frame_copy = frame.copy()
         edges = cv2.Canny(frame, 50, 200, apertureSize=3)
         lines = cv2.HoughLinesP(edges, 1, np.pi/180,
                                 threshold=50, minLineLength=100, maxLineGap=50)
