@@ -139,10 +139,6 @@ class CVTools:
             "red2": ([0, 50, 50], [10, 255, 250]),
             "yellow": ([20, 100, 100], [40, 255, 255])
         }
-        
-        self.node.msg.is_circle_detected = False
-        self.node.msg.center_x2_error = 0
-        self.node.msg.center_y2_error = 0
 
         hsv_img = cv2.cvtColor(roi_img, cv2.COLOR_BGR2HSV)
         for color_name, (lower, upper) in hsv_colors.items():
@@ -189,9 +185,6 @@ class CVTools:
                 # 矩形拟合
                 approx = cv2.approxPolyDP(
                     contour, 0.03 * cv2.arcLength(contour, True), True)  # 逼近精度4%轮廓周长
-                self.node.msg.is_square_detected = False
-                self.node.msg.center_x1_error = 0
-                self.node.msg.center_y1_error = 0
                 if len(approx) == 4:
                     M = cv2.moments(contour)
                     center_x = int(M['m10'] / M['m00'])
