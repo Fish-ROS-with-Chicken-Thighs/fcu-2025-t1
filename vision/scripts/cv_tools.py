@@ -129,23 +129,26 @@ class CVTools:
 
         hsv_colors = {
             #"blue": ([90, 50, 50], [130, 255, 255]),
-            "green": ([40, 50, 50], [80, 255, 255]),
-            "red": ([120, 50, 50], [180, 255, 250]),
-            "yellow": ([20, 100, 100], [40, 255, 255])
+            #"green": ([40, 50, 50], [80, 255, 255]),
+            "red1":  ([0, 50, 50], [10, 255, 255]),  # 低端红色范围
+            "red2":  ([170, 50, 50], [180, 255, 255]),  # 高端红色范围
+            "yellow":([20, 100, 100], [40, 255, 255])
         }
 
         hsv_img = cv2.cvtColor(roi_img, cv2.COLOR_BGR2HSV)
         for color_name, (lower, upper) in hsv_colors.items():
             hsv_mask = cv2.inRange(hsv_img, np.array(lower), np.array(upper))
             hsv_result = cv2.bitwise_and(roi_img, roi_img, hsv_mask)
+            if cv2.countNonZero(hsv_mask) < 1000:
+                continue
             hsv_open = cv2.morphologyEx(hsv_result, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
             hsv_gray = cv2.cvtColor(hsv_open, cv2.COLOR_BGR2GRAY)
             hsv_edges = cv2.Canny(hsv_gray, 100, 200)
-            _, hsv_thresh = cv2.threshold(hsv_edges, 150, 255, cv2.THRESH_TRUNC)
+            _, hsv_thresh = cv2.threshold(hsv_edges, 150, 255, cv2.THRESH_BINARY)
             hsv_contours, _ = cv2.findContours(hsv_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
             valid_contours = [cnt for cnt in hsv_contours if cv2.contourArea(cnt) > 1000]
             possible_contours = CVTools.filter_contours_by_centroid(valid_contours, min_dist=20)
-                
+            
             for contour in possible_contours:
                 # 霍夫圆检测
                 # param1用于边缘Canny算子的高阈值。大值检测更少的边缘，减少圆数量。
@@ -159,10 +162,10 @@ class CVTools:
                     center_y = int(M['m01'] / M['m00']) # 轮廓中心
                     circle = np.uint16(np.around(circle))
                     for i in circle[0, :]:
-                        cv2.circle(frame_copy, center=(x-5+i[0], y-5+i[1]), radius=i[2], color=(255, 0, 255), thickness=2)
+                        #cv2.circle(frame_copy, center=(x-5+i[0], y-5+i[1]), radius=i[2], color=(255, 0, 255), thickness=2)
                         cv2.putText(frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                         frame_copy = CVTools.mark(contour, frame_copy, x, y)
-                        if color_name == "red":
+                        if color_name == "red1" or color_name == "red2":
                             self.node.msg.is_circle_detected = True
                             self.node.msg.center_x2_error = int(y-5+i[1]) - frame_copy.shape[0]//2
                             self.node.msg.center_y2_error = int(x-5+i[0]) - frame_copy.shape[1]//2
@@ -175,7 +178,7 @@ class CVTools:
                     center_y = int(M['m01'] / M['m00']) # 轮廓中心
                     cv2.putText(frame_copy, f"2", (x+center_x-40, y+center_y-40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                     frame_copy = CVTools.mark(contour, frame_copy, x, y)
-                    if color_name == "red":
+                    if color_name == "yellow":
                         self.node.msg.is_square_detected = True
                         self.node.msg.center_x1_error = int(y-5+center_y) - frame_copy.shape[0]//2
                         self.node.msg.center_y1_error = int(x-5+center_x) - frame_copy.shape[1]//2

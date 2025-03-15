@@ -52,7 +52,8 @@ class vision_pub_node(Node):
             valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 10000]
             #cv2.drawContours(frame, valid_contours, -1, (0, 255, 0), 3)  # 绘制轮廓
             detect_copy = self.cv_tools.detect_contours(valid_contours, bl_frame)  # 过滤轮廓，并检测
-            cv2.imshow('图形检测效果', detect_copy)
+            #cv2.imshow('图形检测效果', detect_copy)
+            cv2.imshow('vision', detect_copy)
             cv2.waitKey(1)
             
             self.vision_pub.publish(self.msg) # ros发布
