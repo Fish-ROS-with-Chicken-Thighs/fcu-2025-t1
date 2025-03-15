@@ -4,7 +4,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node, Rate
 from vision.msg import Vision
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
 import cv_tools # 导入工具类
 
@@ -12,8 +12,9 @@ class vision_pub_node(Node):
     def __init__(self):
         super().__init__('vision_pub')
         self.vision_pub = self.create_publisher(Vision, 'vision', 10)
-        #self.frame_sub = self.create_subscription(Image, '/camera/ground', self.ground_callback, 1) # 实机
-        self.frame_sub = self.create_subscription(Image, '/camera_ground/image_raw', self.ground_callback, 1) # 仿真
+        self.frame_pub = self.create_publisher(CompressedImage, 'frame', 10)
+        self.frame_sub = self.create_subscription(Image, '/camera/ground', self.ground_callback, 1) # 实机
+        #self.frame_sub = self.create_subscription(Image, '/camera_ground/image_raw', self.ground_callback, 1) # 仿真
         self.bridge = CvBridge()
         self.cv_tools = cv_tools.CVTools(self)  # 创建工具类实例
         # 初始化消息
@@ -56,12 +57,13 @@ class vision_pub_node(Node):
             #cv2.imshow('vision', detect_copy)
 
             detect_copy1 = self.cv_tools.yellow_square_detect(bl_frame)  # 矩形检测
-            cv2.imshow('yellow', detect_copy1)
+            #cv2.imshow('yellow', detect_copy1)
             detect_copy2 = self.cv_tools.red_circle_detect(bl_frame)  # 红色圆形检测
-            cv2.imshow('red', detect_copy2)
-            cv2.waitKey(1)
-            
-            self.vision_pub.publish(self.msg) # ros发布
+            #cv2.imshow('red', detect_copy2)
+            #cv2.waitKey(1)
+
+            self.frame_pub.publish(self.bridge.cv2_to_compressed_imgmsg(detect_copy2))
+            self.vision_pub.publish(self.msg)
 
         except Exception as e:
             self.get_logger().error(f"Error occurred: {e}")
