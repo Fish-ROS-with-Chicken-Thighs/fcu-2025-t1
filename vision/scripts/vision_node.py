@@ -56,9 +56,9 @@ class vision_pub_node(Node):
             #cv2.imshow('vision', detect_copy)
 
             detect_copy1 = self.cv_tools.yellow_square_detect(bl_frame)  # 矩形检测
-            cv2.imshow('黄色矩形检测效果', detect_copy1)
+            cv2.imshow('yellow', detect_copy1)
             detect_copy2 = self.cv_tools.red_circle_detect(bl_frame)  # 红色圆形检测
-            cv2.imshow('红色圆形检测效果', detect_copy2)
+            cv2.imshow('red', detect_copy2)
             
             cv2.waitKey(1)
             
