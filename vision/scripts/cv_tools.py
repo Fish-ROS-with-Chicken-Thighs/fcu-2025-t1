@@ -135,8 +135,8 @@ class CVTools:
         hsv_colors = {
             #"blue": ([90, 50, 50], [130, 255, 255]),
             #"green": ([40, 50, 50], [80, 255, 255]),
-            "red1":  ([0, 50, 50], [10, 255, 255]),  # 低端红色范围
-            "red2":  ([170, 50, 50], [180, 255, 255]),  # 高端红色范围
+            "red1": ([0, 100, 100], [10, 255, 255]),  # 低端红色，缩小S和V范围
+            "red2": ([170, 100, 100], [180, 255, 255]),  # 高端红色
             "yellow":([20, 100, 100], [40, 255, 255])
         }
 
@@ -151,26 +151,26 @@ class CVTools:
             hsv_edges = cv2.Canny(hsv_gray, 100, 200)
             _, hsv_thresh = cv2.threshold(hsv_edges, 150, 255, cv2.THRESH_BINARY)
             hsv_contours, _ = cv2.findContours(hsv_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-            valid_contours = [cnt for cnt in hsv_contours if cv2.contourArea(cnt) > 1000]
+            valid_contours = [cnt for cnt in hsv_contours if cv2.contourArea(cnt) > 500]
             possible_contours = CVTools.filter_contours_by_centroid(valid_contours, min_dist=20)
             
             for contour in possible_contours:
-                # 霍夫圆检测
-                # param1用于边缘Canny算子的高阈值。大值检测更少的边缘，减少圆数量。
-                # param2用于圆心的累加器阈值。小值更多的累加器投票，检测到更多的假阳性圆。
-                circle = cv2.HoughCircles(hsv_edges, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
-                                        param1=10, param2=33, minRadius=20, maxRadius=0)
-                #circle = CVTools.filter_best_circle(circle)
-                if circle is not None:
-                    M = cv2.moments(contour)
-                    center_x = int(M['m10'] / M['m00'])
-                    center_y = int(M['m01'] / M['m00']) # 轮廓中心
-                    circle = np.uint16(np.around(circle))
-                    for i in circle[0, :]:
-                        #cv2.circle(frame_copy, center=(x-5+i[0], y-5+i[1]), radius=i[2], color=(255, 0, 255), thickness=2)
-                        cv2.putText(frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
-                        frame_copy = CVTools.mark(contour, frame_copy, x, y)
-                        if color_name == "red1" or color_name == "red2":
+                if color_name == "red1" or color_name == "red2":
+                    # 霍夫圆检测
+                    # param1用于边缘Canny算子的高阈值。大值检测更少的边缘，减少圆数量。
+                    # param2用于圆心的累加器阈值。小值更多的累加器投票，检测到更多的假阳性圆。
+                    circle = cv2.HoughCircles(hsv_edges, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
+                                            param1=10, param2=33, minRadius=20, maxRadius=0)
+                    #circle = CVTools.filter_best_circle(circle)
+                    if circle is not None:
+                        M = cv2.moments(contour)
+                        center_x = int(M['m10'] / M['m00'])
+                        center_y = int(M['m01'] / M['m00']) # 轮廓中心
+                        circle = np.uint16(np.around(circle))
+                        for i in circle[0, :]:
+                            #cv2.circle(frame_copy, center=(x-5+i[0], y-5+i[1]), radius=i[2], color=(255, 0, 255), thickness=2)
+                            cv2.putText(frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
+                            frame_copy = CVTools.mark(contour, frame_copy, x, y)
                             self.node.msg.is_circle_detected = True
                             self.node.msg.center_x2_error = int(
                                 y-5+i[1]) - frame_copy.shape[0]//2
