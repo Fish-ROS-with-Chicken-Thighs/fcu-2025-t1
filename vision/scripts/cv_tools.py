@@ -135,9 +135,14 @@ class CVTools:
         hsv_colors = {
             # "blue": ([90, 50, 50], [130, 255, 255]),
             "green": ([40, 50, 50], [80, 255, 255]),
-            "red": ([120, 50, 50], [180, 255, 250]),
+            "red1": ([120, 50, 50], [180, 255, 250]),
+            "red2": ([0, 50, 50], [10, 255, 250]),
             "yellow": ([20, 100, 100], [40, 255, 255])
         }
+        
+        self.node.msg.is_circle_detected = False
+        self.node.msg.center_x2_error = 0
+        self.node.msg.center_y2_error = 0
 
         hsv_img = cv2.cvtColor(roi_img, cv2.COLOR_BGR2HSV)
         for color_name, (lower, upper) in hsv_colors.items():
@@ -152,13 +157,9 @@ class CVTools:
             hsv_contours, _ = cv2.findContours(
                 hsv_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
             valid_contours = [
-                cnt for cnt in hsv_contours if cv2.contourArea(cnt) > 1000]
+                cnt for cnt in hsv_contours if cv2.contourArea(cnt) > 10]
             possible_contours = CVTools.filter_contours_by_centroid(
                 valid_contours, min_dist=20)
-
-            self.node.msg.is_circle_detected = False
-            self.node.msg.center_x2_error = 0
-            self.node.msg.center_y2_error = 0
 
             for contour in possible_contours:
                 # 霍夫圆检测
@@ -178,7 +179,7 @@ class CVTools:
                         cv2.putText(
                             frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                         frame_copy = CVTools.mark(contour, frame_copy, x, y)
-                        if color_name is "red":
+                        if color_name in ["red1", "red2"]:
                             self.node.msg.is_circle_detected = True
                             self.node.msg.center_x2_error = int(
                                 y-5+i[1]) - frame_copy.shape[0]//2
