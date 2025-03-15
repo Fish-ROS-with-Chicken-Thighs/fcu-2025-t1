@@ -146,13 +146,13 @@ fn main() -> anyhow::Result<()> {
                 let mut vel_msg = TwistStamped::default();
                 vel_msg.twist.linear.z = 1.5 - current_pose.lock().unwrap().z;
                 vel_msg.twist.linear.x =
-                    -vision_result.lock().unwrap().center_x1_error as f64 / 1000.0;
+                    -vision_result.lock().unwrap().center_x1_error as f64 / 800.0;
                 vel_msg.twist.linear.y =
-                    -vision_result.lock().unwrap().center_y1_error as f64 / 1000.0;
+                    -vision_result.lock().unwrap().center_y1_error as f64 / 800.0;
                 local_vel_pub.publish(&vel_msg)?;
                 let x2 = vision_result.lock().unwrap().center_x1_error.pow(2);
                 let y2 = vision_result.lock().unwrap().center_y1_error.pow(2);
-                if vision_result.lock().unwrap().is_square_detected && x2 + y2 < 500 {
+                if vision_result.lock().unwrap().is_square_detected && x2 + y2 < 300 {
                     servo_pub.publish(Bool { data: true })?;
                     has_dropped = true;
                     println!("脱钩");
@@ -171,9 +171,11 @@ fn main() -> anyhow::Result<()> {
                 local_vel_pub.publish(&vel_msg)?;
                 let x2 = vision_result.lock().unwrap().center_x2_error.pow(2);
                 let y2 = vision_result.lock().unwrap().center_y2_error.pow(2);
-                if vision_result.lock().unwrap().is_circle_detected && x2 + y2 < 500 {
-                    mode = 5;
-                    println!("Finish");
+                if vision_result.lock().unwrap().is_circle_detected && x2 + y2 < 300 {
+                    temp_point = current_pose.lock().unwrap().clone();
+                    temp_point.z = 0.2;
+                    mode = 4;
+                    println!("Mode 4");
                 }
             }
             4 => {
@@ -183,6 +185,9 @@ fn main() -> anyhow::Result<()> {
                     if points_index == 2 {
                         mode = 1;
                         println!("Mode 1");
+                    } else if points_index == 3 {
+                        mode = 5;
+                        println!("Finish");
                     }
                 }
             }
