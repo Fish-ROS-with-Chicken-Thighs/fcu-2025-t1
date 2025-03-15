@@ -1,6 +1,6 @@
 launch:
   - include:
-      file: "$(find-pkg-share livox_ros_driver2)/launch/msg_MID360_launch.py"
+      file: "$(find-pkg-share livox_ros_driver2)/launch_ROS2/msg_MID360_launch.py"
   - include:
       file: "$(find-pkg-share fast_lio)/launch/mapping.launch.py"
       arg:
