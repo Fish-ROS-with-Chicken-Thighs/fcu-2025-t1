@@ -51,9 +51,15 @@ class vision_pub_node(Node):
             contours, _ = cv2.findContours(thresh_frame2, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)  # 提取轮廓
             valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 1000]
             #cv2.drawContours(frame, valid_contours, -1, (0, 255, 0), 3)  # 绘制轮廓
-            detect_copy = self.cv_tools.detect_contours(valid_contours, bl_frame)  # 过滤轮廓，并检测
+            #detect_copy = self.cv_tools.detect_contours(valid_contours, bl_frame)  # 过滤轮廓，并检测
             #cv2.imshow('图形检测效果', detect_copy)
-            cv2.imshow('vision', detect_copy)
+            #cv2.imshow('vision', detect_copy)
+
+            detect_copy1 = self.cv_tools.yellow_square_detect(bl_frame)  # 矩形检测
+            cv2.imshow('黄色矩形检测效果', detect_copy1)
+            detect_copy2 = self.cv_tools.red_circle_detect(bl_frame)  # 红色圆形检测
+            cv2.imshow('红色圆形检测效果', detect_copy2)
+            
             cv2.waitKey(1)
             
             self.vision_pub.publish(self.msg) # ros发布
