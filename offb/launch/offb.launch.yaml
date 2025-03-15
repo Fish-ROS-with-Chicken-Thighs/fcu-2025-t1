@@ -1,0 +1,29 @@
+launch:
+  - include:
+      file: "$(find-pkg-share livox_ros_driver2)/launch/msg_MID360_launch.py"
+  - include:
+      file: "$(find-pkg-share fast_lio)/launch/mapping.launch.py"
+      arg:
+        - name: "rviz"
+          value: "false"
+  - node:
+      pkg: "mavros"
+      exec: "mavros_node"
+      param:
+        - name: "fcu_url"
+          value: "serial:///dev/ttyACM0:921600"
+  - node:
+      pkg: "ros2_tools"
+      exec: "lidar_data_node"
+  - node:
+      pkg: "ros2_tools"
+      exec: "lidar_to_px4_node"
+  - node:
+      pkg: "ros2_tools"
+      exec: "ground_camera_node"
+  - node:
+      pkg: "vision"
+      exec: "vision_node.py"
+  - node:
+      pkg: "servo_control"
+      exec: "servo_control"
