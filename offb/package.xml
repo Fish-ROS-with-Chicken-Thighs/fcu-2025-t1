@@ -1,0 +1,19 @@
+<package format="3">
+  <name>offb_node</name>
+  <version>0.0.0</version>
+  <description>2025 飞控第一次积分赛</description>
+  <maintainer email="insmtr@insmtr.cn">user</maintainer>
+  <license>MIT</license>
+
+  <depend>rclrs</depend>
+  <depend>anyhow</depend>
+  <depend>vision</depend>
+  <depend>std_msgs</depend>
+  <depend>ros2_tools</depend>
+  <depend>mavros_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <export>
+    <build_type>ament_cargo</build_type>
+  </export>
+</package>
