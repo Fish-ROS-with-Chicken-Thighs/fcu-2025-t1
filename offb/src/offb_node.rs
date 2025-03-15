@@ -10,6 +10,7 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+use std_msgs::msg::Bool;
 use vision::msg::Vision;
 
 fn main() -> anyhow::Result<()> {
@@ -57,6 +58,7 @@ fn main() -> anyhow::Result<()> {
     })?;
     let local_pos_pub = node.create_publisher("mavros/setpoint_position/local")?;
     let local_vel_pub = node.create_publisher("mavros/setpoint_velocity/cmd_vel")?;
+    let servo_pub = node.create_publisher("servo_flag")?;
     let arming_client = node.create_client::<CommandBool>("mavros/cmd/arming")?;
     let set_mode_client = node.create_client::<SetMode>("mavros/set_mode")?;
 
@@ -151,9 +153,10 @@ fn main() -> anyhow::Result<()> {
                 let x2 = vision_result.lock().unwrap().center_x1_error.pow(2);
                 let y2 = vision_result.lock().unwrap().center_y1_error.pow(2);
                 if vision_result.lock().unwrap().is_square_detected && x2 + y2 < 500 {
-                    // TODO: 脱钩
+                    servo_pub.publish(Bool { data: true })?;
                     has_dropped = true;
                     println!("脱钩");
+                    sleep(Duration::from_secs(1));
                     mode = 4;
                     println!("Mode 4");
                 }
