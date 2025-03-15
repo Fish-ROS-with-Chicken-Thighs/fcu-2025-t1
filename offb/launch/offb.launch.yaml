@@ -27,3 +27,8 @@ launch:
   - node:
       pkg: "servo_control"
       exec: "servo_control"
+      output: screen
+  - node:
+      pkg: "offb_node"
+      exec: "offb_node"
+      output: screen
