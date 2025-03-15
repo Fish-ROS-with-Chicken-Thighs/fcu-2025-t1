@@ -12,7 +12,8 @@ class vision_pub_node(Node):
     def __init__(self):
         super().__init__('vision_pub')
         self.vision_pub = self.create_publisher(Vision, 'vision', 10)
-        self.frame_pub = self.create_publisher(CompressedImage, 'frame', 10)
+        self.frame_pub1 = self.create_publisher(CompressedImage, 'frame1', 10)
+        self.frame_pub2 = self.create_publisher(CompressedImage, 'frame2', 10)
         self.frame_sub = self.create_subscription(Image, '/camera/ground', self.ground_callback, 1) # 实机
         #self.frame_sub = self.create_subscription(Image, '/camera_ground/image_raw', self.ground_callback, 1) # 仿真
         self.bridge = CvBridge()
@@ -44,7 +45,7 @@ class vision_pub_node(Node):
             #cv2.imshow('逆光补偿效果', bl_frame)
             
             gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # 灰度
-            _, thresh_frame1 = cv2.threshold(gray_frame, 50, 255, cv2.THRESH_BINARY) # 二值化处理，<50->0，>50->255
+            _, thresh_frame1 = cv2.threshold(gray_frame, 100, 255, cv2.THRESH_BINARY) # 二值化处理，<50->0，>50->255
             hl_copy = self.cv_tools.line_detect(thresh_frame1) # 霍夫直线
             #cv2.imshow('霍夫直线效果', hl_copy)
 
@@ -62,8 +63,8 @@ class vision_pub_node(Node):
             #cv2.imshow('red', detect_copy2)
             #cv2.waitKey(1)
 
-            self.frame_pub.publish(self.bridge.cv2_to_compressed_imgmsg(detect_copy1))
-            self.frame_pub.publish(self.bridge.cv2_to_compressed_imgmsg(hl_copy))
+            self.frame_pub1.publish(self.bridge.cv2_to_compressed_imgmsg(detect_copy1))
+            self.frame_pub2.publish(self.bridge.cv2_to_compressed_imgmsg(hl_copy))
             self.vision_pub.publish(self.msg)
 
         except Exception as e:
