@@ -36,3 +36,6 @@
 /build/
 /install/
 /log/
+
+# Python cache files
+**/__pycache__/
