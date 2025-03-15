@@ -193,18 +193,12 @@ void quadcopter::main_loop() {
                 flight_ctrl->fly_by_velocity(&vel2);
                 if (std::abs(vision_msg->center_x2_error) < 20 && std::abs(vision_msg->center_y2_error) < 20) {
                     RCLCPP_INFO(this->get_logger(), "降落");
-                    flag = 6;
-                }
-                break;
-            case 6:
-                vel2.set_vx(vision_msg->center_x2_error/2000.0);
-                vel2.set_vy(vision_msg->center_y2_error/2000.0);
-                vel2.set_vz(-0.2);
-                flight_ctrl->fly_by_velocity(&vel2);
-                if (z < 0.1) {
-                    is_complete_cast = true;
+                    vel2.set_vx(0.0);
+                    vel2.set_vy(0.0);
+                    vel2.set_vz(-0.2);
+                    flight_ctrl->fly_by_vel_duration(&vel2, 5.0);
                     RCLCPP_INFO(this->get_logger(), "降落完成");
-                    flag = 7;
+                    flag = 6;
                 }
                 break;
         }
