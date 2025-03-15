@@ -17,7 +17,7 @@ launch:
       exec: "lidar_data_node"
   - node:
       pkg: "ros2_tools"
-      exec: "lidar_to_px4_node"
+      exec: "lidar_to_px4_bridge"
   - node:
       pkg: "ros2_tools"
       exec: "ground_camera_node"
