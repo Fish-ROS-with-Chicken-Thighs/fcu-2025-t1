@@ -12,6 +12,7 @@
 #include "mavros_msgs/srv/set_mode.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "ros2_tools/msg/lidar_pose.hpp"
 
 using namespace std::chrono_literals;
 
@@ -80,7 +81,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr cmd_vel_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr bool_pub_;
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+  rclcpp::Subscription<ros2_tools::msg::LidarPose>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr vision_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr vision2_sub_;
   rclcpp::Client<mavros_msgs::srv::CommandBool>::SharedPtr arming_client_;
@@ -89,7 +90,7 @@ private:
 
   // 消息存储
   mavros_msgs::msg::State current_state_;
-  nav_msgs::msg::Odometry current_odom_;
+  ros2_tools::msg::LidarPose current_odom_;
   geometry_msgs::msg::PoseStamped pose_;
   geometry_msgs::msg::Point vision_;
   geometry_msgs::msg::Point vision2_;
@@ -104,7 +105,7 @@ private:
     
     pose_.pose.position.x = 0.0;
     pose_.pose.position.y = 0.0;
-    pose_.pose.position.z = target_height_;
+    pose_.pose.position.z = 1.5;
     bool_msg_.data = false;
   }
 
@@ -130,9 +131,9 @@ private:
         check_connection_status();
       });
 
-    odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-      "/mavros/global_position/local", mavros_qos,
-      [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
+    odom_sub_ = create_subscription<ros2_tools::msg::LidarPose>(
+      "lidar_data", mavros_qos,
+      [this](const ros2_tools::msg::LidarPose::SharedPtr msg) {
         current_odom_ = *msg;
       });
   
@@ -307,12 +308,12 @@ private:
 
   void handle_active_state4() {
     auto now = this->now();
-    double current_y = current_odom_.pose.pose.position.y;
-    double current_z = current_odom_.pose.pose.position.z;
-    double current_w = current_odom_.pose.pose.orientation.z;
+    double current_y = current_odom_.y;
+    double current_z = current_odom_.z;
+    double current_w = current_odom_.yaw;
     double error_y = 0.0 - current_y;
     double error_z = 1.5 - current_z;
-    double error_w = current_w;
+    double error_w = -current_w/2;
     double target_x_ = vision2_.y;
     double target_y_ = vision2_.x;
     geometry_msgs::msg::TwistStamped twist;
@@ -346,10 +347,10 @@ private:
   
   void handle_active_state5() {
     auto now = this->now();
-    double current_z = current_odom_.pose.pose.position.z;
-    double current_w = current_odom_.pose.pose.orientation.z;
+    double current_z = current_odom_.z;
+    double current_w = current_odom_.yaw;
     double error_z = 0.8 - current_z;
-    double error_w = current_w;
+    double error_w = -current_w/2;
     double target_x_ = vision2_.y;
     double target_y_ = vision2_.x;
     geometry_msgs::msg::TwistStamped twist;
@@ -471,16 +472,16 @@ private:
 
   void publish_velocity() {
     auto now = this->now();
-    double current_x = current_odom_.pose.pose.position.x;
-    double current_y = current_odom_.pose.pose.position.y;
-    double current_z = current_odom_.pose.pose.position.z;
-    double current_w = current_odom_.pose.pose.orientation.z;
+    double current_x = current_odom_.x;
+    double current_y = current_odom_.y;
+    double current_z = current_odom_.z;
+    double current_w = current_odom_.yaw;
     double target_x_ = vision_.y;
     double target_y_ = vision_.x;
     int vision_button = vision_.z;
     double error_y = 0.0 - current_y;
-    double error_z = target_height_ - current_z;
-    double error_w = current_w;
+    double error_z = 1.5 - current_z;
+    double error_w = -current_w/2;
     geometry_msgs::msg::TwistStamped twist;
     twist.header.stamp = this->now();
     twist.header.frame_id = "base_link";
