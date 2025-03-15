@@ -96,8 +96,8 @@ class CVTools:
         mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
         mask = cv2.bitwise_or(mask1, mask2)
 
-        circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, dp=1, minDist=20,
-                                param1=20, param2=20, minRadius=20, maxRadius=0)
+        circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, dp=2, minDist=20,
+                                param1=50, param2=50, minRadius=20, maxRadius=0)
         if circles is not None:
             circles = np.uint16(np.around(circles))
             for i in circles[0, :]:

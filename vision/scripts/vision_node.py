@@ -47,9 +47,9 @@ class vision_pub_node(Node):
             hl_copy = self.cv_tools.line_detect(thresh_frame1) # 霍夫直线
             #cv2.imshow('霍夫直线效果', hl_copy)
 
-            _, thresh_frame2 = cv2.threshold(gray_frame, 235, 255, cv2.THRESH_BINARY)
-            contours, _ = cv2.findContours(thresh_frame2, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)  # 提取轮廓
-            valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 1000]
+            #_, thresh_frame2 = cv2.threshold(gray_frame, 235, 255, cv2.THRESH_BINARY)
+            #contours, _ = cv2.findContours(thresh_frame2, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)  # 提取轮廓
+            #valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 1000]
             #cv2.drawContours(frame, valid_contours, -1, (0, 255, 0), 3)  # 绘制轮廓
             #detect_copy = self.cv_tools.detect_contours(valid_contours, bl_frame)  # 过滤轮廓，并检测
             #cv2.imshow('图形检测效果', detect_copy)
@@ -59,7 +59,6 @@ class vision_pub_node(Node):
             cv2.imshow('yellow', detect_copy1)
             detect_copy2 = self.cv_tools.red_circle_detect(bl_frame)  # 红色圆形检测
             cv2.imshow('red', detect_copy2)
-            
             cv2.waitKey(1)
             
             self.vision_pub.publish(self.msg) # ros发布
