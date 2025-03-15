@@ -133,26 +133,17 @@ class CVTools:
         x, y, w, h = cv2.boundingRect(contour)
 
         hsv_colors = {
-<<<<<<< HEAD
             #"blue": ([90, 50, 50], [130, 255, 255]),
             #"green": ([40, 50, 50], [80, 255, 255]),
             "red1":  ([0, 50, 50], [10, 255, 255]),  # 低端红色范围
             "red2":  ([170, 50, 50], [180, 255, 255]),  # 高端红色范围
             "yellow":([20, 100, 100], [40, 255, 255])
-=======
-            # "blue": ([90, 50, 50], [130, 255, 255]),
-            "green": ([40, 50, 50], [80, 255, 255]),
-            "red1": ([120, 50, 50], [180, 255, 250]),
-            "red2": ([0, 50, 50], [10, 255, 250]),
-            "yellow": ([20, 100, 100], [40, 255, 255])
->>>>>>> team/master
         }
 
         hsv_img = cv2.cvtColor(roi_img, cv2.COLOR_BGR2HSV)
         for color_name, (lower, upper) in hsv_colors.items():
             hsv_mask = cv2.inRange(hsv_img, np.array(lower), np.array(upper))
             hsv_result = cv2.bitwise_and(roi_img, roi_img, hsv_mask)
-<<<<<<< HEAD
             if cv2.countNonZero(hsv_mask) < 1000:
                 continue
             hsv_open = cv2.morphologyEx(hsv_result, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
@@ -163,21 +154,6 @@ class CVTools:
             valid_contours = [cnt for cnt in hsv_contours if cv2.contourArea(cnt) > 1000]
             possible_contours = CVTools.filter_contours_by_centroid(valid_contours, min_dist=20)
             
-=======
-            hsv_open = cv2.morphologyEx(
-                hsv_result, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
-            hsv_gray = cv2.cvtColor(hsv_open, cv2.COLOR_BGR2GRAY)
-            hsv_edges = cv2.Canny(hsv_gray, 100, 200)
-            _, hsv_thresh = cv2.threshold(
-                hsv_edges, 150, 255, cv2.THRESH_TRUNC)
-            hsv_contours, _ = cv2.findContours(
-                hsv_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-            valid_contours = [
-                cnt for cnt in hsv_contours if cv2.contourArea(cnt) > 10]
-            possible_contours = CVTools.filter_contours_by_centroid(
-                valid_contours, min_dist=20)
-
->>>>>>> team/master
             for contour in possible_contours:
                 # 霍夫圆检测
                 # param1用于边缘Canny算子的高阈值。大值检测更少的边缘，减少圆数量。
