@@ -15,3 +15,6 @@ ros2_tools_rs = "*"
 mavros_msgs = "*"
 geometry_msgs = "*"
 vision = "*"
+
+[package.metadata.ros]
+install_to_share = ["launch"]
