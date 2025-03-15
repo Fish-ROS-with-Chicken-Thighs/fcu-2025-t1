@@ -26,14 +26,11 @@ fn main() -> anyhow::Result<()> {
     let vision_result = Arc::new(Mutex::new(Vision::default()));
     let vision_result_clone = Arc::clone(&vision_result);
 
-    let mut qos = QoSProfile::default();
-    qos.reliability = QoSReliabilityPolicy::BestEffort;
-    let _state_sub = node.create_subscription("mavros/state", qos, move |msg: State| {
+    let _state_sub = node.create_subscription("mavros/state", move |msg: State| {
         *current_state_clone.lock().unwrap() = msg;
     })?;
     let _pose_sub = node.create_subscription(
-        "mavros/local_position/pose",
-        qos,
+        "mavros/local_position/pose".qos(QoSProfile::default().best_effort()),
         move |msg: PoseStamped| {
             let w = msg.pose.orientation.w;
             let x = msg.pose.orientation.x;
@@ -55,11 +52,11 @@ fn main() -> anyhow::Result<()> {
             };
         },
     )?;
-    let _vision_sub = node.create_subscription("vision", qos, move |msg: Vision| {
+    let _vision_sub = node.create_subscription("vision", move |msg: Vision| {
         *vision_result_clone.lock().unwrap() = msg;
     })?;
-    let local_pos_pub = node.create_publisher("mavros/setpoint_position/local", qos)?;
-    let local_vel_pub = node.create_publisher("mavros/setpoint_velocity/cmd_vel", qos)?;
+    let local_pos_pub = node.create_publisher("mavros/setpoint_position/local")?;
+    let local_vel_pub = node.create_publisher("mavros/setpoint_velocity/cmd_vel")?;
     let arming_client = node.create_client::<CommandBool>("mavros/cmd/arming")?;
     let set_mode_client = node.create_client::<SetMode>("mavros/set_mode")?;
 
