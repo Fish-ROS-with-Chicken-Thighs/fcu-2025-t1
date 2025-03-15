@@ -120,7 +120,7 @@ fn main() -> anyhow::Result<()> {
                 vel_msg.twist.linear.z = 1.5 - current_pose.lock().unwrap().z;
                 if vision_result.lock().unwrap().is_line_detected {
                     vel_msg.twist.linear.y =
-                        (-vision_result.lock().unwrap().lateral_error / 80) as f64;
+                        (-vision_result.lock().unwrap().lateral_error / 50) as f64;
                     vel_msg.twist.angular.z =
                         (vision_result.lock().unwrap().angle_error / 10.0) as f64;
                 }
@@ -156,6 +156,11 @@ fn main() -> anyhow::Result<()> {
                     servo_pub.publish(Bool { data: true })?;
                     has_dropped = true;
                     println!("脱钩");
+                    vel_msg.twist.linear.x = 0.0;
+                    vel_msg.twist.linear.y = 0.0;
+                    local_vel_pub.publish(&vel_msg)?;
+                    sleep(Duration::from_secs(1));
+                    local_vel_pub.publish(&vel_msg)?;
                     sleep(Duration::from_secs(1));
                     mode = 4;
                     println!("Mode 4");

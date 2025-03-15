@@ -227,7 +227,7 @@ class CVTools:
         lateral_error = (x1 + x2)//2 - frame.shape[1]//2  # 线中心-图形中心
 
         # 控制器优化
-        if abs(lateral_error) < 30:
+        if abs(lateral_error) < 10:
             gain = 0
         else:  # 横向误差较大
             gain = 1
