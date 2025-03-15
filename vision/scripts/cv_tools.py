@@ -123,7 +123,7 @@ class CVTools:
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)  # 外接矩形
             if 0.8 < w / h < 1.25:
-                frame_roi = frame[y-5:y + h+5, x-5:x + w+5]
+                frame_roi = frame[y-5:y + h+5,x-5:x + w+5].copy()
                 if frame_roi.size > 0:
                     self.hsv_detect(frame_copy, frame_roi, contour)
         return frame_copy
@@ -162,20 +162,18 @@ class CVTools:
                 # param1用于边缘Canny算子的高阈值。大值检测更少的边缘，减少圆数量。
                 # param2用于圆心的累加器阈值。小值更多的累加器投票，检测到更多的假阳性圆。
                 circle = cv2.HoughCircles(hsv_edges, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
-                                          param1=10, param2=35, minRadius=20, maxRadius=0)
-                # circle = CVTools.filter_best_circle(circle)
+                                        param1=10, param2=33, minRadius=20, maxRadius=0)
+                #circle = CVTools.filter_best_circle(circle)
                 if circle is not None:
                     M = cv2.moments(contour)
                     center_x = int(M['m10'] / M['m00'])
-                    center_y = int(M['m01'] / M['m00'])  # 轮廓中心
+                    center_y = int(M['m01'] / M['m00']) # 轮廓中心
                     circle = np.uint16(np.around(circle))
                     for i in circle[0, :]:
-                        cv2.circle(frame_copy, center=(
-                            x-5+i[0], y-5+i[1]), radius=i[2],  color=(255, 0, 255), thickness=2)
-                        cv2.putText(
-                            frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
+                        cv2.circle(frame_copy, center=(x-5+i[0], y-5+i[1]), radius=i[2], color=(255, 0, 255), thickness=2)
+                        cv2.putText(frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                         frame_copy = CVTools.mark(contour, frame_copy, x, y)
-                        if color_name in ["red1", "red2"]:
+                        if color_name == "red":
                             self.node.msg.is_circle_detected = True
                             self.node.msg.center_x2_error = int(
                                 y-5+i[1]) - frame_copy.shape[0]//2
@@ -192,12 +190,12 @@ class CVTools:
                     cv2.putText(frame_copy, f"2", (x+center_x-40, y+center_y-40),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                     frame_copy = CVTools.mark(contour, frame_copy, x, y)
-                    self.node.msg.is_square_detected = True
-                    self.node.msg.center_x1_error = int(
-                        y-5+center_y) - frame_copy.shape[0]//2
-                    self.node.msg.center_y1_error = int(
-                        x-5+center_x) - frame_copy.shape[1]//2
-
+                    if color_name == "red":
+                        self.node.msg.is_square_detected = True
+                        self.node.msg.center_x1_error = int(y-5+center_y) - frame_copy.shape[0]//2
+                        self.node.msg.center_y1_error = int(x-5+center_x) - frame_copy.shape[1]//2
+                        
+    
     # 霍夫直线，TODO：卡尔曼滤波
     def line_detect(self, frame):
         frame_copy = cv2.cvtColor(frame.copy(), cv2.COLOR_GRAY2BGR)
