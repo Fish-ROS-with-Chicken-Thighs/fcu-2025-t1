@@ -124,7 +124,7 @@ void quadcopter::main_loop() {
     target first_point(0.0, 0.0, 1.5, 0.0);
     target tar1(0.0, 0.0, 0.0, 0.0);
     velocity vel1(0.1, 0.0, 0.0, 0.0);
-    velocity vel2(0.05, 0.0, 0.0, 0.0);
+    velocity vel2(0.15, 0.0, 0.0, 0.0);
     while (rclcpp::ok()) {
         switch (flag) {
             case 0:
@@ -144,8 +144,8 @@ void quadcopter::main_loop() {
             case 2:
                 vel2.set_vy(vision_msg->lateral_error/-1000.0);
                 vel2.set_vyaw(vision_msg->angle_error/5);
-                if (default_altitude - z > 0.05) { vel2.set_vz(0.03); } 
-                else if (default_altitude - z < -0.05) { vel2.set_vz(-0.03); }
+                if (default_altitude - z > 0.05) { vel2.set_vz(default_altitude - z); } 
+                else if (default_altitude - z < -0.05) { vel2.set_vz(default_altitude - z); }
                 flight_ctrl->fly_by_velocity(&vel2);
                 if (vision_msg->is_square_detected && !is_complete_cast) {
                     // 记录位置
@@ -164,11 +164,11 @@ void quadcopter::main_loop() {
                 }
                 break;
             case 3:
-                vel2.set_vx(vision_msg->center_x1_error/-2000.0);
-                vel2.set_vy(vision_msg->center_y1_error/-2000.0);
+                vel2.set_vx(vision_msg->center_x1_error/-1000.0);
+                vel2.set_vy(vision_msg->center_y1_error/-1000.0);
                 vel2.set_vyaw(0.0);
-                if (default_altitude - z > 0.05) { vel2.set_vz(0.03); } 
-                else if (default_altitude - z < -0.05) { vel2.set_vz(-0.03); }
+                if (default_altitude - z > 0.05) { vel2.set_vz(default_altitude - z); } 
+                else if (default_altitude - z < -0.05) { vel2.set_vz(default_altitude - z); }
                 flight_ctrl->fly_by_velocity(&vel2);
                 if (std::abs(vision_msg->center_x1_error) < 20 && std::abs(vision_msg->center_y1_error) < 20) {
                     RCLCPP_INFO(this->get_logger(), "投掷");
@@ -180,13 +180,13 @@ void quadcopter::main_loop() {
                 break;
             case 4:
                 flight_ctrl->fly_to_target(&tar1);
-                vel2.set_vx(0.05);
+                vel2.set_vx(0.15);
                 RCLCPP_INFO(this->get_logger(), "继续巡线");
                 flag = 2;
                 break;
             case 5:
-                vel2.set_vx(vision_msg->center_x2_error/-2000.0);
-                vel2.set_vy(vision_msg->center_y2_error/-2000.0);
+                vel2.set_vx(vision_msg->center_x2_error/-1000.0);
+                vel2.set_vy(vision_msg->center_y2_error/-1000.0);
                 vel2.set_vyaw(0.0);
                 if (default_altitude - z > 0.05) { vel2.set_vz(0.03); } 
                 else if (default_altitude - z < -0.05) { vel2.set_vz(-0.03); }
