@@ -118,7 +118,9 @@ fn main() -> anyhow::Result<()> {
                 let mut vel_msg = TwistStamped::default();
                 vel_msg.twist.linear.x = 0.1;
                 vel_msg.twist.linear.z = 1.5 - current_pose.lock().unwrap().z;
-                if vision_result.lock().unwrap().is_line_detected {
+                if vision_result.lock().unwrap().is_line_detected
+                    && vision_result.lock().unwrap().lateral_error.abs() < 100
+                {
                     vel_msg.twist.linear.y =
                         (-vision_result.lock().unwrap().lateral_error / 50) as f64;
                     vel_msg.twist.angular.z =
