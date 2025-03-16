@@ -62,15 +62,8 @@ class CVTools:
     
     # 增强亮度
     @staticmethod
-    def enhance_brightness(image):
-        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
-        
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-        l = clahe.apply(l)
-        
-        enhanced_lab = cv2.merge((l, a, b))
-        enhanced_image = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+    def increase_brightness_linear(image, value=50):
+        enhanced_image = np.clip(image + value, 0, 255).astype(np.uint8)
         return enhanced_image
 
     # 质心法轮廓去重
