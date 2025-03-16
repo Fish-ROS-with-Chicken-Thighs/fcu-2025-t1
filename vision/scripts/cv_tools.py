@@ -105,6 +105,11 @@ class CVTools:
                 self.node.msg.is_circle_detected = True
                 self.node.msg.center_x2_error = int(i[1]) - frame_copy.shape[0]//2
                 self.node.msg.center_y2_error = int(i[0]) - frame_copy.shape[1]//2
+                return frame_copy
+        
+        self.node.msg.is_circle_detected = False
+        self.node.msg.center_x2_error = 0
+        self.node.msg.center_y2_error = 0
         return frame_copy
     
     # 黄方检测
@@ -133,6 +138,11 @@ class CVTools:
                 self.node.msg.is_square_detected = True
                 self.node.msg.center_x1_error = center_y - frame_copy.shape[0]//2
                 self.node.msg.center_y1_error = center_x - frame_copy.shape[1]//2
+                return frame_copy
+        
+        self.node.msg.is_square_detected = False
+        self.node.msg.center_x1_error = 0
+        self.node.msg.center_y1_error = 0
         return frame_copy
 
 
