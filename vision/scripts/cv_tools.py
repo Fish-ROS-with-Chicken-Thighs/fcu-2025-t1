@@ -136,7 +136,7 @@ class CVTools:
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                 frame_copy = CVTools.mark(contour, frame_copy, 0, 0)
                 self.node.msg.is_square_detected = True
-                self.node.msg.center_x1_error = center_y - frame_copy.shape[0]//2
+                self.node.msg.center_x1_error = center_y - frame_copy.shape[0]//2 - 20
                 self.node.msg.center_y1_error = center_x - frame_copy.shape[1]//2
                 return frame_copy
         
@@ -196,7 +196,7 @@ class CVTools:
                             cv2.putText(frame_copy, f"1", (x-5+i[0] - 40, y-5+i[1] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)
                             frame_copy = CVTools.mark(contour, frame_copy, x, y)
                             self.node.msg.is_circle_detected = True
-                            self.node.msg.center_x2_error = int(y-5+i[1]) - frame_copy.shape[0]//2
+                            self.node.msg.center_x2_error = int(y-5+i[1]) - frame_copy.shape[0]//2 - 20
                             self.node.msg.center_y2_error = int(x-5+i[0]) - frame_copy.shape[1]//2
 
                 # 矩形拟合
