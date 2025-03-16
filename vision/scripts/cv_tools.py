@@ -59,6 +59,19 @@ class CVTools:
         lab = cv2.merge((l, a, b))
         result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
         return result
+    
+    # 增强亮度
+    @staticmethod
+    def enhance_brightness(image):
+        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        
+        enhanced_lab = cv2.merge((l, a, b))
+        enhanced_image = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+        return enhanced_image
 
     # 质心法轮廓去重
     @staticmethod
@@ -111,8 +124,8 @@ class CVTools:
     def yellow_square_detect(self, frame):
         frame_copy = frame.copy()
         hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        lower_yellow = np.array([20, 100, 100])
-        upper_yellow = np.array([40, 255, 255])
+        lower_yellow = np.array([15, 70, 70])  # 降低S和V的下界，提高对暗黄色的识别
+        upper_yellow = np.array([50, 255, 255])  # 增大H范围，以适应不同黄色
         mask = cv2.inRange(hsv_img, lower_yellow, upper_yellow)
         result = cv2.bitwise_and(frame_copy, frame_copy, mask=mask)
         gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
