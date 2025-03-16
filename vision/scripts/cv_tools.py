@@ -59,12 +59,6 @@ class CVTools:
         lab = cv2.merge((l, a, b))
         result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
         return result
-    
-    # 增强亮度
-    @staticmethod
-    def increase_brightness_linear(image, value=50):
-        enhanced_image = np.clip(image + value, 0, 255).astype(np.uint8)
-        return enhanced_image
 
     # 质心法轮廓去重
     @staticmethod

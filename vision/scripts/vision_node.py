@@ -57,11 +57,11 @@ class vision_pub_node(Node):
             #cv2.imshow('图形检测效果', detect_copy)
             #cv2.imshow('vision', detect_copy)
 
-            light_frame = self.cv_tools.increase_brightness_linear(frame, 50)  # 增加亮度
-            detect_copy1 = self.cv_tools.yellow_square_detect(light_frame)  # 矩形检测
-            #cv2.imshow('yellow', detect_copy1)
             detect_copy2 = self.cv_tools.red_circle_detect(frame)  # 红色圆形检测
             #cv2.imshow('red', detect_copy2)
+            frame = frame[:, frame.shape[1] // 5:]
+            detect_copy1 = self.cv_tools.yellow_square_detect(frame)  # 矩形检测
+            #cv2.imshow('yellow', detect_copy1)
             #cv2.waitKey(1)
 
             self.frame_pub1.publish(self.bridge.cv2_to_compressed_imgmsg(detect_copy1))
